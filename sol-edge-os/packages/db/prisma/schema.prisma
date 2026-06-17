@@ -1,0 +1,76 @@
+// SOL EDGE OS — M0 schema (foundations).
+// The full 22-table domain model (trades, exits, stop_moves, signals,
+// execution_events, etc.) lands in M1. M0 ships only the auth/audit/config
+// spine plus the conservative risk + kill-switch/circuit-breaker defaults.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// One row per human. Single-user system, but modeled explicitly so access
+/// control and audit attribution are first-class. Linked to Supabase auth.users
+/// by userId (no cross-schema FK; Supabase owns the auth schema).
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique // = auth.users.id (uuid)
+  email     String   @unique
+  isOwner   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("profiles")
+}
+
+/// Trading risk configuration. Singleton (id = "singleton").
+/// Conservative v1 defaults per spec: 0.5% risk, 1 open position, 3 trades/day.
+model Settings {
+  id               String   @id @default("singleton")
+  accountSize      Decimal  @default(0) @db.Decimal(20, 8)
+  riskPctPerTrade  Decimal  @default(0.5) @db.Decimal(6, 4)
+  maxOpenPositions Int      @default(1)
+  maxTradesPerDay  Int      @default(3)
+  takerFeeBps      Int      @default(16) // Kraken spot taker ~0.16%
+  baseCurrency     String   @default("USD")
+  updatedAt        DateTime @updatedAt
+
+  @@map("settings")
+}
+
+/// Global execution safety controls the worker reads BEFORE every action.
+/// Singleton (id = "singleton"). trading_enabled defaults FALSE — the system
+/// never trades until explicitly armed.
+model SystemConfiguration {
+  id                              String   @id @default("singleton")
+  tradingEnabled                  Boolean  @default(false)
+  killSwitchEngaged               Boolean  @default(false)
+  killSwitchReason                String?
+  // Circuit breaker thresholds — auto-disable trading when breached.
+  circuitBreakerMaxDrawdownPct    Decimal  @default(10) @db.Decimal(6, 3)
+  circuitBreakerConsecutiveLosses Int      @default(5)
+  maintenanceMode                 Boolean  @default(false)
+  updatedAt                       DateTime @updatedAt
+
+  @@map("system_configuration")
+}
+
+/// Append-only audit trail. Made physically immutable by a Postgres trigger
+/// (see prisma/sql/audit_immutability.sql) that rejects UPDATE and DELETE.
+model AuditLog {
+  id        String   @id @default(cuid())
+  at        DateTime @default(now())
+  actor     String // "user:<uuid>" | "system" | "worker"
+  action    String // e.g. "auth.login", "mfa.enrolled", "killswitch.engaged"
+  entity    String?
+  entityId  String?
+  data      Json?
+  ip        String?
+  userAgent String?
+
+  @@index([at])
+  @@index([action])
+  @@map("audit_logs")
+}

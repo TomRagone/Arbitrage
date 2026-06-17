@@ -7,6 +7,25 @@ settings:
 importers:
 
   .:
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  apps/worker:
+    dependencies:
+      '@sol-edge/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/db:
     dependencies:
       '@prisma/client':
         specifier: ^6.1.0

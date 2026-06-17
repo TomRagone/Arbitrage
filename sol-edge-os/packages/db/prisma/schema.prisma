@@ -1,15 +1,11 @@
-// SOL EDGE OS — M0 schema (foundations).
-// The full 22-table domain model (trades, exits, stop_moves, signals,
-// execution_events, etc.) lands in M1. M0 ships only the auth/audit/config
-// spine plus the conservative risk + kill-switch/circuit-breaker defaults.
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /// One row per human. Single-user system, but modeled explicitly so access
@@ -17,7 +13,7 @@ datasource db {
 /// by userId (no cross-schema FK; Supabase owns the auth schema).
 model Profile {
   id        String   @id @default(cuid())
-  userId    String   @unique // = auth.users.id (uuid)
+  userId    String   @unique
   email     String   @unique
   isOwner   Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -33,7 +29,7 @@ model Settings {
   riskPctPerTrade  Decimal  @default(0.5) @db.Decimal(6, 4)
   maxOpenPositions Int      @default(1)
   maxTradesPerDay  Int      @default(3)
-  takerFeeBps      Int      @default(16) // Kraken spot taker ~0.16%
+  takerFeeBps      Int      @default(16)
   baseCurrency     String   @default("USD")
   updatedAt        DateTime @updatedAt
 
@@ -48,7 +44,6 @@ model SystemConfiguration {
   tradingEnabled                  Boolean  @default(false)
   killSwitchEngaged               Boolean  @default(false)
   killSwitchReason                String?
-  // Circuit breaker thresholds — auto-disable trading when breached.
   circuitBreakerMaxDrawdownPct    Decimal  @default(10) @db.Decimal(6, 3)
   circuitBreakerConsecutiveLosses Int      @default(5)
   maintenanceMode                 Boolean  @default(false)
@@ -62,8 +57,8 @@ model SystemConfiguration {
 model AuditLog {
   id        String   @id @default(cuid())
   at        DateTime @default(now())
-  actor     String // "user:<uuid>" | "system" | "worker"
-  action    String // e.g. "auth.login", "mfa.enrolled", "killswitch.engaged"
+  actor     String
+  action    String
   entity    String?
   entityId  String?
   data      Json?

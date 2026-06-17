@@ -10,7 +10,7 @@
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "harden": "psql \"$DIRECT_URL\" -f prisma/sql/audit_immutability.sql",
+    "harden": "psql \"$DIRECT_URL\" -f prisma/sql/audit_immutability.sql -f prisma/sql/trade_immutability.sql",
     "seed": "tsx prisma/seed.ts",
     "studio": "prisma studio",
     "typecheck": "tsc --noEmit"
@@ -20,6 +20,7 @@
     "@prisma/client": "^6.1.0"
   },
   "devDependencies": {
+    "@types/node": "^22.9.0",
     "prisma": "^6.1.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"

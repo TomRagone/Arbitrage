@@ -47,6 +47,14 @@ model SystemConfiguration {
   circuitBreakerMaxDrawdownPct    Decimal  @default(10) @db.Decimal(6, 3)
   circuitBreakerConsecutiveLosses Int      @default(5)
   maintenanceMode                 Boolean  @default(false)
+  /// Taker rate by default (conservative — matches Settings.takerFeeBps).
+  feeRateEntryBps                 Int      @default(16)
+  /// Taker rate by default (conservative). TP fills could later be modeled
+  /// as maker, but the locked default treats every exit as taker.
+  feeRateExitBps                  Int      @default(16)
+  /// Assumed, not empirically measured — there is no real execution data
+  /// yet to calibrate this against. Flagged in cost-report output.
+  slippageBps                     Int      @default(5)
   updatedAt                       DateTime @updatedAt
 
   @@map("system_configuration")
@@ -68,4 +76,76 @@ model AuditLog {
   @@index([at])
   @@index([action])
   @@map("audit_logs")
+}
+
+enum Direction {
+  LONG
+  SHORT
+}
+
+enum TradeStatus {
+  OPEN
+  CLOSED
+}
+
+/// A paper (dry-run) trade created the moment a signal is approved.
+/// initialStop is the permanent 1R risk anchor: made immutable once set by a
+/// Postgres trigger (see prisma/sql/trade_immutability.sql) — no code path,
+/// app bug, or compromised role can move it after the trade is locked.
+model Trade {
+  id              String      @id @default(cuid())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  mode            String      @default("PAPER")
+  pair            String
+  direction       Direction
+  status          TradeStatus @default(OPEN)
+  entryPrice      Decimal     @db.Decimal(20, 8)
+  initialStop     Decimal     @db.Decimal(20, 8)
+  takeProfit      Decimal     @db.Decimal(20, 8)
+  riskPerUnit     Decimal     @db.Decimal(20, 8)
+  rMultipleTarget Decimal     @db.Decimal(6, 3)
+  size            Decimal     @db.Decimal(20, 8)
+  approvedReason  String?
+  exits           TradeExit[]
+  stopMoves       TradeStopMove[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("trades")
+}
+
+/// Append-only exit/scale-out events for a trade (TP1/TP2/TP3/SL/manual).
+/// Made physically immutable the same way as audit_logs — see
+/// prisma/sql/trade_immutability.sql.
+model TradeExit {
+  id          String   @id @default(cuid())
+  at          DateTime @default(now())
+  tradeId     String
+  trade       Trade    @relation(fields: [tradeId], references: [id])
+  kind        String
+  price       Decimal  @db.Decimal(20, 8)
+  sizePortion Decimal  @db.Decimal(20, 8)
+  rMultiple   Decimal  @db.Decimal(6, 3)
+
+  @@index([tradeId])
+  @@map("trade_exits")
+}
+
+/// Append-only stop-move events (e.g. moving to breakeven after TP1).
+/// initialStop on Trade never changes — the *current* effective stop for a
+/// trade is "latest TradeStopMove for it, else its initialStop." Made
+/// physically immutable the same way as trade_exits/audit_logs — see
+/// prisma/sql/trade_immutability.sql.
+model TradeStopMove {
+  id        String   @id @default(cuid())
+  at        DateTime @default(now())
+  tradeId   String
+  trade     Trade    @relation(fields: [tradeId], references: [id])
+  fromPrice Decimal  @db.Decimal(20, 8)
+  toPrice   Decimal  @db.Decimal(20, 8)
+  reason    String
+
+  @@index([tradeId])
+  @@map("trade_stop_moves")
 }

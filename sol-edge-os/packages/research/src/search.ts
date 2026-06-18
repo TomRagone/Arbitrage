@@ -1,6 +1,7 @@
 import type { CompactCandle, StrategyDSL } from "@sol-edge/core";
 import { FeatureEngine } from "@sol-edge/database";
-import type { SimConfig, FrictionParams } from "@sol-edge/sim";
+import { runAstKernel } from "@sol-edge/kernel";
+import { applyFriction, type SimConfig, type FrictionParams } from "@sol-edge/sim";
 import { generateStrategies, type SearchSpace } from "./generator";
 import { runStrategyExecution, type BacktestExecutionResult } from "./run";
 import type { TemporalSplit } from "./split";
@@ -10,6 +11,13 @@ export interface RankedStrategy {
   readonly trainStats: BacktestExecutionResult; // diagnostic only
   readonly testStats: BacktestExecutionResult; // SELECTION KEY
   readonly trials: number; // how many candidates were searched
+  // Added in Step 9.4: raw per-trade net log returns on the TEST segment,
+  // needed by significance.ts (Sharpe/skew/kurtosis require the underlying
+  // distribution, not just the aggregate stats in testStats). Computed via
+  // the same runAstKernel+applyFriction logic run.ts uses internally — kept
+  // separate here rather than modifying run.ts's already-committed
+  // BacktestExecutionResult (Step 6.1), which has no raw-array field.
+  readonly testReturns: readonly number[];
 }
 
 // Defaults not specified by the given 3-arg signature (runSearch needs
@@ -46,10 +54,16 @@ export function evaluateCandidate(
   testFeatures: readonly Readonly<Record<string, number>>[],
   simConfig: SimConfig,
   frictionParams: FrictionParams,
-): { trainStats: BacktestExecutionResult; testStats: BacktestExecutionResult } {
+): { trainStats: BacktestExecutionResult; testStats: BacktestExecutionResult; testReturns: readonly number[] } {
   const trainStats = runStrategyExecution(strategy, trainCandles, trainFeatures, simConfig, frictionParams);
   const testStats = runStrategyExecution(strategy, testCandles, testFeatures, simConfig, frictionParams);
-  return { trainStats, testStats };
+
+  // Same logic runStrategyExecution uses internally (validate already ran
+  // inside it above), just exposing the per-trade array for significance.ts.
+  const testTrades = runAstKernel(strategy, testCandles, testFeatures);
+  const testReturns = testTrades.map((trade) => applyFriction(trade, simConfig, frictionParams).netReturnLog);
+
+  return { trainStats, testStats, testReturns };
 }
 
 export function runSearch(
@@ -70,8 +84,8 @@ export function runSearch(
   const testFeatures = computeFeatures(split.test, fullSeries, space.featureKeys);
 
   const ranked: RankedStrategy[] = candidates.map((strategy) => {
-    const { trainStats, testStats } = evaluateCandidate(strategy, split.train, trainFeatures, split.test, testFeatures, simConfig, frictionParams);
-    return { strategy, trainStats, testStats, trials: candidates.length };
+    const { trainStats, testStats, testReturns } = evaluateCandidate(strategy, split.train, trainFeatures, split.test, testFeatures, simConfig, frictionParams);
+    return { strategy, trainStats, testStats, trials: candidates.length, testReturns };
   });
 
   // Rank by the OUT-OF-SAMPLE (test) objective only. In-sample (train)

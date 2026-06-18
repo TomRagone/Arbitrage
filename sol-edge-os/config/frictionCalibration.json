@@ -1,0 +1,38 @@
+{
+  "derivedAt": "2026-06-18T13:51:32.690Z",
+  "sourceMarketConfig": {
+    "exchange": "kraken",
+    "pair": "SOL/USDT",
+    "resolution": "1h"
+  },
+  "sampleWindow": {
+    "windowDays": 60,
+    "barsUsed": 721,
+    "fromTs": 1776606689,
+    "toTs": 1781790689
+  },
+  "simConfig": {
+    "alpha": 0.00014019346698451024,
+    "beta": 0.042243644543547204,
+    "gammaPanic": 1.5,
+    "kappaImpact": 0.0014019346698451024,
+    "fixedFeeRate": 0.0026
+  },
+  "frictionParams": {
+    "sigmaEntry": 0.003318687781306148,
+    "sigmaExit": 0.003318687781306148,
+    "quantity": 223.73464257010966,
+    "adv": 22373.464257010965
+  },
+  "measured": {
+    "spreadFraction": 0.0002803869339690205,
+    "medianSigma": 0.003318687781306148,
+    "adv": 22373.464257010965,
+    "fixedFeeRate": 0.0026
+  },
+  "assumed": {
+    "referenceImpactRatio": 0.01,
+    "gammaPanic": 1.5
+  },
+  "_methodologyNote": "alpha and fixedFeeRate are measured from a live ticker spread snapshot and the pre-registered fee tier (config/market.json). sigmaEntry/sigmaExit/adv are measured from the ingested OHLCV series (median |log return| and average daily base-asset volume). beta and kappaImpact are NOT empirically fittable (no real fill/slippage data exists for this venue) and are derived via a documented spread-relative heuristic: beta = alpha / median(sigma_t); kappaImpact = alpha / sqrt(referenceImpactRatio), with quantity = adv * referenceImpactRatio kept self-consistent with that same reference point. gammaPanic has no real-data anchor and is carried over unchanged as an explicitly-flagged assumption. Re-run this script (apps/worker/scripts/calibrate-friction.ts) to refresh — it is idempotent and safe to re-run."
+}

@@ -78,3 +78,41 @@ trend-data-starved). The earlier "4H positive" result reverses to negative
 **Conclusion:** 1D is the strongest candidate in this entire investigation
 — real sample size, coherent design, survives costs. Not a verdict yet:
 one pair, one historical window, no out-of-sample holdout, no walk-forward.
+
+### Phase 10B — Friction calibration to the locked venue
+**Q:** `@sol-edge/sim`'s SimConfig/FrictionParams (the OOS research
+apparatus's friction model, separate from Step 5's `estimateTradeCosts`)
+were still round-number placeholders (`fixedFeeRate=0.0004` vs. the real
+26bps taker fee, `alpha/beta/kappaImpact` never derived from the venue at
+all). Does calibrating them from real, measurable data change the
+reality gap `trackRealityGap` reports?
+**Method:** `apps/worker/scripts/calibrate-friction.ts` ingested a real
+60-day trailing window of Kraken SOL/USDT 1h OHLCV (721 bars), computed
+median |close-to-close log return| and average daily base-asset volume
+from it, and fetched a live ticker spread snapshot. alpha (half-spread)
+and fixedFeeRate (real taker fee) are measured directly. beta and
+kappaImpact have no real fill/slippage data to fit against (Kraken's
+public API has no historical order book), so they're derived via a
+documented spread-relative heuristic instead: `beta = alpha /
+median(sigma_t)`, `kappaImpact = alpha / sqrt(referenceImpactRatio)` with
+`referenceImpactRatio = 0.01` — flagged as an assumption, not a
+measurement (see `config/frictionCalibration.json`'s `_methodologyNote`).
+`apps/worker/scripts/reality-gap-report.ts` then ran a small fixed,
+seeded sample of 5 generated strategies (apparatus exercise, not a
+search/discovery claim — no ranking, no selection) over the same real
+candles, applying both the old placeholder friction and the new
+calibrated friction.
+**Result:** Old placeholder: mean reality gap 0.008065 (log-return
+terms) per trade, warning not tripped. New calibrated (real costs): mean
+reality gap 0.006111 per trade, warning not tripped. The old
+`kappaImpact` (0.02) had been an order of magnitude larger than the real
+venue's spread-derived value (0.0014) — overstating impact cost more than
+the higher real fee rate (26bps vs. the old 4bps placeholder) added back.
+**Conclusion:** The apparatus's friction model now reflects this venue's
+real fee schedule and measured spread/volatility/ADV, not arbitrary
+numbers — `DEFAULT_SIM_CONFIG`/`DEFAULT_FRICTION_PARAMS`
+(`packages/research/src/search.ts`) are wired to
+`config/frictionCalibration.json`, so every future search/holdout run
+through this apparatus inherits it automatically. Not a strategy result:
+no edge claim made or implied here, and this doesn't touch the
+pre-registration ledger. 10C (the real pre-registered search) is next.

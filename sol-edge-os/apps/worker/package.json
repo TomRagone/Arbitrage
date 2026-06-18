@@ -20,12 +20,19 @@
     "integrity-audit": "tsx --env-file=../../packages/db/.env scripts/integrity-audit.ts",
     "expectancy-report": "tsx --env-file=../../packages/db/.env scripts/expectancy-report.ts",
     "timeframe-sweep": "tsx --env-file=../../packages/db/.env scripts/timeframe-sweep.ts",
+    "calibrate-friction": "tsx scripts/calibrate-friction.ts",
+    "reality-gap-report": "tsx scripts/reality-gap-report.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@sol-edge/analytics": "workspace:*",
+    "@sol-edge/core": "workspace:*",
+    "@sol-edge/database": "workspace:*",
     "@sol-edge/db": "workspace:*",
     "@sol-edge/exchanges": "workspace:*",
+    "@sol-edge/kernel": "workspace:*",
+    "@sol-edge/research": "workspace:*",
+    "@sol-edge/sim": "workspace:*",
     "@sol-edge/strategy": "workspace:*"
   },
   "devDependencies": {

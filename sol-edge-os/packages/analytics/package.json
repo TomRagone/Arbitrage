@@ -12,6 +12,7 @@
   "dependencies": {
     "@sol-edge/db": "workspace:*",
     "@sol-edge/exchanges": "workspace:*",
+    "@sol-edge/sim": "workspace:*",
     "@sol-edge/strategy": "workspace:*"
   },
   "devDependencies": {

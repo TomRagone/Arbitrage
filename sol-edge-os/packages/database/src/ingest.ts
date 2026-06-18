@@ -144,6 +144,33 @@ export async function ingestOHLCV(cfg: MarketConfig, fromTs: number, toTs: numbe
   }
 }
 
+export interface StoredOHLCVRow {
+  readonly timestamp: number;
+  readonly open: number;
+  readonly high: number;
+  readonly low: number;
+  readonly close: number;
+  readonly volume: number;
+}
+
+/// Read-only accessor over the same store ingestOHLCV writes to — used by
+/// the friction calibration script (Phase 10B) to read back the real
+/// ingested series without re-fetching from the exchange.
+export function readOHLCV(cfg: MarketConfig, fromTs: number, toTs: number, dbPath: string = DEFAULT_DB_PATH): StoredOHLCVRow[] {
+  const db = openDb(dbPath);
+  try {
+    return db
+      .prepare(
+        `SELECT timestamp, open, high, low, close, volume FROM ohlcv_candles
+         WHERE exchange = ? AND pair = ? AND resolution = ? AND timestamp >= ? AND timestamp <= ?
+         ORDER BY timestamp ASC`,
+      )
+      .all(cfg.exchange, cfg.pair, cfg.resolution, fromTs, toTs) as unknown as StoredOHLCVRow[];
+  } finally {
+    db.close();
+  }
+}
+
 interface CcxtExchange {
   fetchOHLCV(symbol: string, timeframe: string, since: number, limit: number): Promise<number[][]>;
 }

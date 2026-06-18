@@ -25,3 +25,11 @@ export { mfeOverWindow, analyzeTradeExcursion, findExitIndex, type TradeExcursio
 export { median, mean, profitFactor, summarizeRDistribution, type RDistributionSummary } from "./stats";
 export { loadHistoricalSignals, computeBiasSeries, utcDay, type HistoricalSignals, type TimedSignal } from "./historicalData";
 export { runDiagnostic, type DiagnosticResult } from "./runDiagnostic";
+export {
+  estimateBarLogReturns,
+  estimateAverageDailyVolume,
+  deriveCalibratedFriction,
+  type OhlcvPoint,
+  type CalibrationInputs,
+  type CalibrationResult,
+} from "./frictionCalibration";

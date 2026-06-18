@@ -33,12 +33,27 @@ importers:
       '@sol-edge/analytics':
         specifier: workspace:*
         version: link:../../packages/analytics
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@sol-edge/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@sol-edge/db':
         specifier: workspace:*
         version: link:../../packages/db
       '@sol-edge/exchanges':
         specifier: workspace:*
         version: link:../../packages/exchanges
+      '@sol-edge/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+      '@sol-edge/research':
+        specifier: workspace:*
+        version: link:../../packages/research
+      '@sol-edge/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
       '@sol-edge/strategy':
         specifier: workspace:*
         version: link:../../packages/strategy
@@ -61,6 +76,9 @@ importers:
       '@sol-edge/exchanges':
         specifier: workspace:*
         version: link:../exchanges
+      '@sol-edge/sim':
+        specifier: workspace:*
+        version: link:../sim
       '@sol-edge/strategy':
         specifier: workspace:*
         version: link:../strategy

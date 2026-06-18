@@ -1,0 +1,18 @@
+{
+  "dataSource": "ccxt",
+  "exchange": "kraken",
+  "pair": "SOL/USDT",
+  "marketType": "spot",
+  "resolution": "1h",
+  "feeTier": {
+    "tierName": "entry",
+    "thirtyDayVolumeUsd": "<50000",
+    "takerFeeBps": 26,
+    "makerFeeBps": 16,
+    "fillModel": "marketFillAtNextOpen",
+    "feeUsed": "taker",
+    "source": "https://www.kraken.com/features/fee-schedule",
+    "note": "Entry/lowest-volume tier (taker 0.26%, maker 0.16%) as of this commit. Fill model is market fill at open[t+1] per the kernel's execution-delay rule, so SimConfig calibration in 10B uses the TAKER rate. Update if the real account's actual 30-day volume tier differs."
+  },
+  "_lockNote": "Binding per docs/PRE_REGISTRATION_POLICY.md §5 — exchange/pair/resolution are pre-registered config, not outcome-tuned. Testing additional resolutions (1d, 4h) is a new committed search and must be logged in the preregistration ledger, not a silent edit to this file."
+}

@@ -12,12 +12,87 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
+  apps/live-engine:
+    dependencies:
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
   apps/worker:
     dependencies:
+      '@sol-edge/analytics':
+        specifier: workspace:*
+        version: link:../../packages/analytics
       '@sol-edge/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@sol-edge/exchanges':
+        specifier: workspace:*
+        version: link:../../packages/exchanges
+      '@sol-edge/strategy':
+        specifier: workspace:*
+        version: link:../../packages/strategy
     devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/analytics:
+    dependencies:
+      '@sol-edge/db':
+        specifier: workspace:*
+        version: link:../db
+      '@sol-edge/exchanges':
+        specifier: workspace:*
+        version: link:../exchanges
+      '@sol-edge/strategy':
+        specifier: workspace:*
+        version: link:../strategy
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/core:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/database:
+    dependencies:
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../core
+      ccxt:
+        specifier: ^4.4.0
+        version: 4.5.59
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
       tsx:
         specifier: ^4.19.2
         version: 4.22.4
@@ -31,12 +106,81 @@ importers:
         specifier: ^6.1.0
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
     devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
       prisma:
         specifier: ^6.1.0
         version: 6.19.3(typescript@5.9.3)
       tsx:
         specifier: ^4.19.2
         version: 4.22.4
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/exchanges:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/kernel:
+    dependencies:
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/research:
+    dependencies:
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@sol-edge/database':
+        specifier: workspace:*
+        version: link:../database
+      '@sol-edge/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      '@sol-edge/sim':
+        specifier: workspace:*
+        version: link:../sim
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/sim:
+    dependencies:
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/strategy:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
@@ -199,6 +343,14 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@noble/curves@2.2.0':
+    resolution: {integrity: sha512-T/BoHgFXirb0ENSPBquzX0rcjXeM6Lo892a2jlYJkqk83LqZx0l1Of7DzlKJ6jkpvMrkHSnAcgb5JegL8SeIkQ==}
+    engines: {node: '>= 20.19.0'}
+
+  '@noble/hashes@2.2.0':
+    resolution: {integrity: sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg==}
+    engines: {node: '>= 20.19.0'}
+
   '@prisma/client@6.19.3':
     resolution: {integrity: sha512-mKq3jQFhjvko5LTJFHGilsuQs+W+T3Gm451NzuTDGQxwCzwXHYnIu2zGkRoW+Exq3Rob7yp2MfzSrdIiZVhrBg==}
     engines: {node: '>=18.18'}
@@ -229,8 +381,28 @@ packages:
   '@prisma/get-platform@6.19.3':
     resolution: {integrity: sha512-xFj1VcJ1N3MKooOQAGO0W5tsd0W2QzIvW7DD7c/8H14Zmp4jseeWAITm+w2LLoLrlhoHdPPh0NMZ8mfL6puoHA==}
 
+  '@scure/base@2.2.0':
+    resolution: {integrity: sha512-b8XEupJibegiXV+tDUseI8oLQc8ei3d/4Jkb2RpbHh3MfE054ov3uIz2dhFkB3FI8iwYkEh0gGCApkrYggkPNg==}
+
+  '@scure/bip32@2.2.0':
+    resolution: {integrity: sha512-zFr7t2F+a9+5tB7QbarF2HQNYrgjCNaoLAupZdKkrFMYMozJf5zqH2WJCQibMzm1qQ0QogrxVGO3qXfQDYMaQg==}
+
+  '@scure/bip39@2.2.0':
+    resolution: {integrity: sha512-T/Bj/YvYMNkIPq6EENO6/rcs2e7qTNuyoUXf0KBFDmp0ZDu0H2X4Lq6yC3i0c8PcWkov5EbW+yQZZbdMmk154A==}
+
+  '@scure/starknet@2.2.0':
+    resolution: {integrity: sha512-FPgUFyEgbEG7ewrj9gWUeXpf2b6klBnqcZOSFz6z4ycVCIAeGhNqKQUPlvl2Ka8gfmrbCcdIrImyi+dINr06Uw==}
+    engines: {node: '>= 20.19.0'}
+
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  '@types/node@22.19.21':
+    resolution: {integrity: sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA==}
+
+  bufferutil@4.1.0:
+    resolution: {integrity: sha512-ZMANVnAixE6AWWnPzlW2KpUrxhm9woycYvPOo67jWHyFowASTEd9s+QN1EIMsSDtwhIxN4sWE1jotpuDUIgyIw==}
+    engines: {node: '>=6.14.2'}
 
   c12@3.1.0:
     resolution: {integrity: sha512-uWoS8OU1MEIsOv8p/5a82c3H31LsWVR5qiyXVfBNOzfffjUWtPnhAb4BYI2uG2HfGmZmFjCtui5XNWaps+iFuw==}
@@ -239,6 +411,10 @@ packages:
     peerDependenciesMeta:
       magicast:
         optional: true
+
+  ccxt@4.5.59:
+    resolution: {integrity: sha512-saBA1xMK87EqDApXclXNijElqixSeH9YUNah358YyGj9SkBJ12/63N0hOhxFbbg9R3wt1JfIVpq7eDn3r+TMdA==}
+    engines: {node: '>=18.0.0'}
 
   chokidar@4.0.3:
     resolution: {integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==}
@@ -306,6 +482,10 @@ packages:
   node-fetch-native@1.6.7:
     resolution: {integrity: sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q==}
 
+  node-gyp-build@4.8.4:
+    resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
+    hasBin: true
+
   nypm@0.6.7:
     resolution: {integrity: sha512-s3ds97SD5pd1dULE+tHUk1DrV0cSHOnsfpcdGATJ8JpBo21DoKqN9exTH4/2nhPQNOLomBdTFMicN94S4DrZrQ==}
     engines: {node: '>=18'}
@@ -356,6 +536,21 @@ packages:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  undici-types@6.21.0:
+    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+
+  ws@8.21.0:
+    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
 
 snapshots:
 
@@ -437,6 +632,12 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
+  '@noble/curves@2.2.0':
+    dependencies:
+      '@noble/hashes': 2.2.0
+
+  '@noble/hashes@2.2.0': {}
+
   '@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)':
     optionalDependencies:
       prisma: 6.19.3(typescript@5.9.3)
@@ -472,7 +673,34 @@ snapshots:
     dependencies:
       '@prisma/debug': 6.19.3
 
+  '@scure/base@2.2.0': {}
+
+  '@scure/bip32@2.2.0':
+    dependencies:
+      '@noble/curves': 2.2.0
+      '@noble/hashes': 2.2.0
+      '@scure/base': 2.2.0
+
+  '@scure/bip39@2.2.0':
+    dependencies:
+      '@noble/hashes': 2.2.0
+      '@scure/base': 2.2.0
+
+  '@scure/starknet@2.2.0':
+    dependencies:
+      '@noble/curves': 2.2.0
+      '@noble/hashes': 2.2.0
+
   '@standard-schema/spec@1.1.0': {}
+
+  '@types/node@22.19.21':
+    dependencies:
+      undici-types: 6.21.0
+
+  bufferutil@4.1.0:
+    dependencies:
+      node-gyp-build: 4.8.4
+    optional: true
 
   c12@3.1.0:
     dependencies:
@@ -488,6 +716,20 @@ snapshots:
       perfect-debounce: 1.0.0
       pkg-types: 2.3.1
       rc9: 2.1.2
+
+  ccxt@4.5.59:
+    dependencies:
+      '@noble/curves': 2.2.0
+      '@noble/hashes': 2.2.0
+      '@scure/base': 2.2.0
+      '@scure/bip32': 2.2.0
+      '@scure/bip39': 2.2.0
+      '@scure/starknet': 2.2.0
+      ws: 8.21.0(bufferutil@4.1.0)
+    optionalDependencies:
+      bufferutil: 4.1.0
+    transitivePeerDependencies:
+      - utf-8-validate
 
   chokidar@4.0.3:
     dependencies:
@@ -569,6 +811,9 @@ snapshots:
 
   node-fetch-native@1.6.7: {}
 
+  node-gyp-build@4.8.4:
+    optional: true
+
   nypm@0.6.7:
     dependencies:
       citty: 0.2.2
@@ -614,3 +859,9 @@ snapshots:
       fsevents: 2.3.3
 
   typescript@5.9.3: {}
+
+  undici-types@6.21.0: {}
+
+  ws@8.21.0(bufferutil@4.1.0):
+    optionalDependencies:
+      bufferutil: 4.1.0

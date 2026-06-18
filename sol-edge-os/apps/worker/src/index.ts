@@ -1,114 +1,179 @@
 /**
- * SOL EDGE OS — Worker: clean paper / dry-run directional orchestration.
+ * SOL EDGE OS — Worker: EMA Trend Breakout System v1 (paper/dry-run).
  *
  * Path 1 (trust the DB layer). Every domain operation goes through the
  * @sol-edge/db wrappers — no raw Prisma model access, no HTTP surface, no
  * arbitrage, no execution. The only non-wrapper call is prisma.$disconnect()
  * at shutdown (connection lifecycle, not a domain write).
  *
- * One tick:  Signal -> Validate -> Log -> Resolve   (nothing is ever executed)
+ * Each tick does two independent things:
+ *   1. Manage existing OPEN trades (lifecycle.ts: check the latest 15m
+ *      candle against each trade's current stop/next TP). Runs even if
+ *      trading is disabled — the kill switch stops new risk, not
+ *      resolution of existing risk.
+ *   2. Signal -> Validate -> Log -> Resolve for a possible new trade.
+ *      Signal/validate logic lives in ./engine.ts (locked strategy).
+ *
+ * Base timeframe is 15m, not 5m — moved per the cost diagnostic (5m's
+ * round-trip fee drag exceeded 1R; see engine.ts for detail).
  */
-import { isTradingAllowed, writeAudit, engageKillSwitch, prisma } from "@sol-edge/db";
+import {
+  isTradingAllowed,
+  writeAudit,
+  engageKillSwitch,
+  openPaperTrade,
+  getOpenTrades,
+  getTradeExits,
+  getLatestStopMove,
+  recordPartialExit,
+  recordStopMove,
+  closeTrade,
+  prisma,
+} from "@sol-edge/db";
+import { getOHLC } from "@sol-edge/exchanges";
+import { computeSignal, validateSignal, PAIR, LOWER_TF_INTERVAL_MINUTES } from "./engine";
+import { checkFill, type PositionState, type TpKind } from "@sol-edge/analytics";
 
 const TICK_MS = Number(process.env.WORKER_TICK_SECONDS ?? "5") * 1000; // default 5s
 const ACTOR = "worker";
 const MODE = "PAPER" as const;
 
-// Placeholder risk geometry — replaced by the strategy/risk engine later.
-const RISK_FRACTION = 0.015; // 1R = 1.5% of entry
-const TP_R_MULTIPLE = 2; // take-profit at 2R
-const PLACEHOLDER_SIZE = 1; // real position sizing is a later milestone
-
 let running = true;
-const round = (n: number, dp = 4): number => Number(n.toFixed(dp));
 
-// ───────────────────────────── types ─────────────────────────────
+// ──────────── 1. manage existing open trades (lifecycle) ────────────
 
-type Direction = "LONG" | "SHORT";
+async function managePositions(): Promise<void> {
+  const candlesLower = await getOHLC(PAIR, LOWER_TF_INTERVAL_MINUTES);
+  const completedLowerTf = candlesLower.slice(0, -1); // exclude still-forming candle
+  if (completedLowerTf.length === 0) return;
+  const latestCandle = completedLowerTf[completedLowerTf.length - 1];
 
-interface DirectionalSignal {
-  pair: string;
-  direction: Direction;
-  entryPrice: number;
-  stopLoss: number;
-  takeProfit: number;
-  riskPerUnit: number;
-  rMultipleTarget: number;
-}
+  const openTrades = await getOpenTrades();
+  for (const trade of openTrades) {
+    const exits = await getTradeExits(trade.id);
+    // Deduplicated defensively: each TP kind should only ever be recorded
+    // once per trade, but this guards state reconstruction against any
+    // duplicate rows (e.g. from a prior bug, or any future double-write)
+    // rather than letting them silently corrupt the size-portion math.
+    const filledKinds = [
+      ...new Set(
+        exits.map((e) => e.kind).filter((k): k is TpKind => k === "TP1" || k === "TP2" || k === "TP3"),
+      ),
+    ];
+    const latestStopMove = await getLatestStopMove(trade.id);
+    const currentStop = latestStopMove ? Number(latestStopMove.toPrice) : Number(trade.initialStop);
 
-interface ValidationResult {
-  approved: boolean;
-  size: number;
-  reason: string;
-}
+    const state: PositionState = {
+      direction: trade.direction,
+      entryPrice: Number(trade.entryPrice),
+      riskPerUnit: Number(trade.riskPerUnit),
+      filledKinds,
+      currentStop,
+    };
 
-// ─────────────────────────── 1. SIGNAL ───────────────────────────
+    const event = checkFill({ high: latestCandle.high, low: latestCandle.low }, state);
+    if (!event) continue;
 
-function generateSignal(): DirectionalSignal {
-  const direction: Direction = Math.random() < 0.5 ? "LONG" : "SHORT";
-  const entryPrice = round(150 * (1 + (Math.random() - 0.5) * 0.06)); // ~150 ±3%
-  const riskPerUnit = round(entryPrice * RISK_FRACTION);
-  const dir = direction === "LONG" ? 1 : -1;
-  return {
-    pair: "SOL/USDC",
-    direction,
-    entryPrice,
-    stopLoss: round(entryPrice - dir * riskPerUnit), // 1R from entry
-    takeProfit: round(entryPrice + dir * riskPerUnit * TP_R_MULTIPLE), // 2R from entry
-    riskPerUnit,
-    rMultipleTarget: TP_R_MULTIPLE,
-  };
-}
+    await recordPartialExit({
+      tradeId: trade.id,
+      kind: event.kind,
+      price: event.price,
+      sizePortion: event.sizePortion,
+      rMultiple: event.rMultiple,
+    });
+    const fillAction = event.kind === "SL" ? "TRADE_STOPPED" : `TRADE_${event.kind}_FILLED`;
+    await writeAudit({
+      actor: ACTOR,
+      action: fillAction,
+      entity: "trade",
+      entityId: trade.id,
+      data: { mode: MODE, pair: PAIR, kind: event.kind, price: event.price, sizePortion: event.sizePortion, rMultiple: event.rMultiple },
+    });
+    console.log(`[lifecycle] ${trade.id} ${event.kind} @ ${event.price} (${(event.sizePortion * 100).toFixed(0)}%, ${event.rMultiple}R)`);
 
-// ────────────────────────── 2. VALIDATE ──────────────────────────
+    if (event.movesStopToBreakeven) {
+      const breakeven = Number(trade.entryPrice);
+      await recordStopMove({ tradeId: trade.id, fromPrice: currentStop, toPrice: breakeven, reason: "TP1_BREAKEVEN" });
+      await writeAudit({
+        actor: ACTOR,
+        action: "TRADE_STOP_MOVED_TO_BREAKEVEN",
+        entity: "trade",
+        entityId: trade.id,
+        data: { mode: MODE, pair: PAIR, fromPrice: currentStop, toPrice: breakeven },
+      });
+      console.log(`[lifecycle] ${trade.id} stop moved to breakeven (${breakeven})`);
+    }
 
-type RiskRule = (signal: DirectionalSignal) => { ok: boolean; reason?: string };
-
-// Empty by design; future deterministic rules (min R:R, session, cooldown,
-// max trades/day, regime) drop in here unchanged.
-const RISK_RULES: RiskRule[] = [];
-
-function validateSignal(signal: DirectionalSignal): ValidationResult {
-  for (const rule of RISK_RULES) {
-    const result = rule(signal);
-    if (!result.ok) return { approved: false, size: 0, reason: result.reason ?? "vetoed by risk rule" };
+    // SL always exits all remaining size; TP3 is the last scale-out leg —
+    // both fully close the trade. TP1/TP2 leave it OPEN (partially filled).
+    if (event.kind === "SL" || event.kind === "TP3") {
+      await closeTrade(trade.id);
+      await writeAudit({ actor: ACTOR, action: "TRADE_CLOSED", entity: "trade", entityId: trade.id, data: { mode: MODE, pair: PAIR, finalKind: event.kind } });
+      console.log(`[lifecycle] ${trade.id} CLOSED`);
+    }
   }
-  return { approved: true, size: PLACEHOLDER_SIZE, reason: "no risk rules configured (dry-run scaffold)" };
 }
 
-// ──────────── lifecycle: Signal -> Validate -> Log -> Resolve ────────────
+// ──────────── 2. Signal -> Validate -> Log -> Resolve (new trade) ────────────
 
 async function runCycle(): Promise<void> {
+  await managePositions();
+
   // The wrapper encapsulates the config read + kill-switch + maintenance logic,
   // so the worker never re-derives trading-allowed state itself.
   if (!(await isTradingAllowed())) {
-    console.log("[cycle] trading disabled — skipping");
+    console.log("[cycle] trading disabled — skipping new signals");
     return;
   }
 
   // 1. Signal
-  const signal = generateSignal();
-  await writeAudit({ actor: ACTOR, action: "TRADE_SIGNAL", entity: "signal", data: { mode: MODE, ...signal } });
-
-  // 2. Validate
-  const decision = validateSignal(signal);
-
-  // 3. Log
-  if (!decision.approved) {
-    await writeAudit({ actor: ACTOR, action: "TRADE_REJECTED", entity: "signal", data: { mode: MODE, pair: signal.pair, reason: decision.reason } });
-    console.log(`[rejected] ${decision.reason}`);
+  const signal = await computeSignal();
+  if (!signal) {
+    console.log("[cycle] no signal this tick");
     return;
   }
   await writeAudit({
     actor: ACTOR,
-    action: "TRADE_APPROVED",
+    action: "TRADE_SIGNAL",
     entity: "signal",
-    data: { mode: MODE, pair: signal.pair, direction: signal.direction, size: decision.size, reason: decision.reason },
+    data: { mode: MODE, pair: PAIR, ...signal },
   });
 
-  // 4. Resolve (dry-run): nothing is sent to any exchange.
-  await writeAudit({ actor: ACTOR, action: "TRADE_RESOLVED", entity: "signal", data: { mode: MODE, pair: signal.pair, outcome: "dry-run; no execution" } });
-  console.log(`[resolved] ${signal.direction} ${signal.pair} @ ${signal.entryPrice} (SL ${signal.stopLoss} / TP ${signal.takeProfit}) — dry-run`);
+  // 2. Validate
+  const decision = await validateSignal(signal);
+
+  // 3. Log
+  if (!decision.approved) {
+    await writeAudit({ actor: ACTOR, action: "TRADE_REJECTED", entity: "signal", data: { mode: MODE, pair: PAIR, direction: signal.direction, reason: decision.reason } });
+    console.log(`[rejected] ${decision.reason}`);
+    return;
+  }
+
+  // 4. Resolve (paper): create the locked trade row. Lifecycle (TP1/TP2/TP3,
+  // stop-to-breakeven) plays out via managePositions() on subsequent ticks.
+  const takeProfit1R =
+    signal.direction === "LONG" ? signal.entryPrice + signal.atrValue : signal.entryPrice - signal.atrValue;
+  const trade = await openPaperTrade({
+    pair: PAIR,
+    direction: signal.direction,
+    entryPrice: signal.entryPrice,
+    initialStop: decision.initialStop!,
+    takeProfit: takeProfit1R,
+    riskPerUnit: signal.atrValue,
+    rMultipleTarget: 1,
+    size: decision.size!,
+    approvedReason: decision.reason,
+  });
+  await writeAudit({
+    actor: ACTOR,
+    action: "TRADE_APPROVED",
+    entity: "trade",
+    entityId: trade.id,
+    data: { mode: MODE, pair: PAIR, direction: signal.direction, size: decision.size, riskAmount: decision.riskAmount, reason: decision.reason },
+  });
+  console.log(
+    `[approved] ${signal.direction} ${PAIR} @ ${signal.entryPrice} (stop ${decision.initialStop} / size ${decision.size}) — trade ${trade.id}`,
+  );
 }
 
 // No silent failure: any unexpected error halts trading via the kill switch.
@@ -126,7 +191,7 @@ async function safeCycle(): Promise<void> {
 
 async function main(): Promise<void> {
   await writeAudit({ actor: ACTOR, action: "worker.started", data: { mode: MODE, tickMs: TICK_MS } });
-  console.log(`[worker] paper/dry-run directional engine started; tick every ${TICK_MS}ms`);
+  console.log(`[worker] EMA Trend Breakout System v1 (paper) started; tick every ${TICK_MS}ms`);
 
   void (async function loop() {
     while (running) {

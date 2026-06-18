@@ -6,12 +6,30 @@
   "scripts": {
     "dev": "tsx watch --env-file=../../packages/db/.env src/index.ts",
     "start": "tsx --env-file=../../packages/db/.env src/index.ts",
+    "backtest": "tsx scripts/backtest.ts",
+    "diagnostics": "tsx scripts/diagnostics.ts",
+    "risk-cap-audit": "tsx scripts/risk-cap-audit.ts",
+    "signal-outcomes": "tsx scripts/signal-outcomes.ts",
+    "cost-model-report": "tsx --env-file=../../packages/db/.env scripts/cost-model-report.ts",
+    "outcome-breakdown": "tsx --env-file=../../packages/db/.env scripts/outcome-breakdown.ts",
+    "variant-test": "tsx --env-file=../../packages/db/.env scripts/variant-test.ts",
+    "mfe-analysis": "tsx --env-file=../../packages/db/.env scripts/mfe-analysis.ts",
+    "mfe-timing-analysis": "tsx --env-file=../../packages/db/.env scripts/mfe-timing-analysis.ts",
+    "mfe-truncated": "tsx --env-file=../../packages/db/.env scripts/mfe-truncated.ts",
+    "mae-mfe-timing": "tsx --env-file=../../packages/db/.env scripts/mae-mfe-timing.ts",
+    "integrity-audit": "tsx --env-file=../../packages/db/.env scripts/integrity-audit.ts",
+    "expectancy-report": "tsx --env-file=../../packages/db/.env scripts/expectancy-report.ts",
+    "timeframe-sweep": "tsx --env-file=../../packages/db/.env scripts/timeframe-sweep.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@sol-edge/db": "workspace:*"
+    "@sol-edge/analytics": "workspace:*",
+    "@sol-edge/db": "workspace:*",
+    "@sol-edge/exchanges": "workspace:*",
+    "@sol-edge/strategy": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^22.9.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }

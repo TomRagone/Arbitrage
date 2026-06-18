@@ -12,15 +12,84 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
-  apps/worker:
+  apps/live-engine:
     dependencies:
-      '@sol-edge/db':
+      '@sol-edge/core':
         specifier: workspace:*
-        version: link:../../packages/db
+        version: link:../../packages/core
     devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
       tsx:
         specifier: ^4.19.2
         version: 4.22.4
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  apps/worker:
+    dependencies:
+      '@sol-edge/analytics':
+        specifier: workspace:*
+        version: link:../../packages/analytics
+      '@sol-edge/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@sol-edge/exchanges':
+        specifier: workspace:*
+        version: link:../../packages/exchanges
+      '@sol-edge/strategy':
+        specifier: workspace:*
+        version: link:../../packages/strategy
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/analytics:
+    dependencies:
+      '@sol-edge/db':
+        specifier: workspace:*
+        version: link:../db
+      '@sol-edge/exchanges':
+        specifier: workspace:*
+        version: link:../exchanges
+      '@sol-edge/strategy':
+        specifier: workspace:*
+        version: link:../strategy
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/core:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/database:
+    dependencies:
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
@@ -31,12 +100,81 @@ importers:
         specifier: ^6.1.0
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
     devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
       prisma:
         specifier: ^6.1.0
         version: 6.19.3(typescript@5.9.3)
       tsx:
         specifier: ^4.19.2
         version: 4.22.4
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/exchanges:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/kernel:
+    dependencies:
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/research:
+    dependencies:
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@sol-edge/database':
+        specifier: workspace:*
+        version: link:../database
+      '@sol-edge/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      '@sol-edge/sim':
+        specifier: workspace:*
+        version: link:../sim
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/sim:
+    dependencies:
+      '@sol-edge/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/strategy:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.19.21
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
@@ -232,6 +370,9 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
+  '@types/node@22.19.21':
+    resolution: {integrity: sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA==}
+
   c12@3.1.0:
     resolution: {integrity: sha512-uWoS8OU1MEIsOv8p/5a82c3H31LsWVR5qiyXVfBNOzfffjUWtPnhAb4BYI2uG2HfGmZmFjCtui5XNWaps+iFuw==}
     peerDependencies:
@@ -357,6 +498,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  undici-types@6.21.0:
+    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+
 snapshots:
 
   '@esbuild/aix-ppc64@0.28.1':
@@ -473,6 +617,10 @@ snapshots:
       '@prisma/debug': 6.19.3
 
   '@standard-schema/spec@1.1.0': {}
+
+  '@types/node@22.19.21':
+    dependencies:
+      undici-types: 6.21.0
 
   c12@3.1.0:
     dependencies:
@@ -614,3 +762,5 @@ snapshots:
       fsevents: 2.3.3
 
   typescript@5.9.3: {}
+
+  undici-types@6.21.0: {}

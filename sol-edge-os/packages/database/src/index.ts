@@ -7,3 +7,4 @@ export {
   type GapAnomaly,
   type IntegrityReport,
 } from "./validate_data";
+export { findGapIndices, segmentAtGaps, markTradeable, type GapSegment } from "./gaps";

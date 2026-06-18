@@ -5,6 +5,17 @@ import { evaluateBoolExpr, type CompactCandle, type EvalContext, type RawTrade, 
 /// evaluation logic. A signal decided on close[t] fills at open[t+1]
 /// (no same-bar fills). Signals on the final bar are skipped (no t+1 to
 /// fill). At most one open position at a time.
+///
+/// Availability convention (Step 10A.4): this execution path needs no
+/// change to be consistent with availability(bar) = open_ts + bar_duration.
+/// The signal on close[t] is KNOWN at availability(t) = timestamp[t] +
+/// bar_duration, which is exactly timestamp[t+1] — the open of the fill
+/// bar. So "decide at close[t], fill at open[t+1]" decides and fills at the
+/// same instant (availability(t)): the tightest possible non-leaking
+/// execution. The data-side half of the convention (a bar's features
+/// becoming usable only at its close) is enforced upstream in
+/// FeatureEngine, which keys its causal block on availability; the kernel
+/// consumes the already-availability-correct features[t] array as-is.
 export function runAstKernel(
   strategy: StrategyDSL,
   candles: readonly CompactCandle[],

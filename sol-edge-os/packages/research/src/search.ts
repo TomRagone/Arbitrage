@@ -35,10 +35,22 @@ export const DEFAULT_FRICTION_PARAMS: FrictionParams = { sigmaEntry: 0.02, sigma
 /// since train always precedes test in time); only this segment's own
 /// candles are ever passed to the kernel for trading. Exported (Step 9.8)
 /// so holdout.ts reuses this rather than duplicating it.
+///
+/// Availability convention (Step 10A.4): features for bar `c` are computed
+/// as of c's CLOSE — targetTime = c.timestamp + barDurationSeconds — so
+/// bar c is included (its data is known at its close) but no later bar is.
+/// barDurationSeconds is inferred from the series' own spacing; the series
+/// is regularly spaced by construction (gaps are handled separately by the
+/// gap policy, 10A.3). For the synthetic Phase-9 pipeline (unit spacing)
+/// this is exactly behavior-preserving: the +barDuration on both the
+/// targetTime and the availability test cancel, so bar c is still included
+/// just as before.
 export function computeFeatures(segment: readonly CompactCandle[], fullSeries: readonly CompactCandle[], featureKeys: readonly string[]): Record<string, number>[] {
+  const barDurationSeconds = fullSeries.length >= 2 ? fullSeries[1].timestamp - fullSeries[0].timestamp : 1;
   return segment.map((c) => {
     const record: Record<string, number> = {};
-    for (const key of featureKeys) record[key] = FeatureEngine.getFeatureSlice(key, c.timestamp, fullSeries);
+    const closeTime = c.timestamp + barDurationSeconds; // availability of bar c = the moment its signal is decided
+    for (const key of featureKeys) record[key] = FeatureEngine.getFeatureSlice(key, closeTime, fullSeries, barDurationSeconds);
     return record;
   });
 }

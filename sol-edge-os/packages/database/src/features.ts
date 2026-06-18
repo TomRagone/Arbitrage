@@ -1,10 +1,22 @@
 import { FEATURE_REGISTRY, type CompactCandle } from "@sol-edge/core";
 
 /**
- * Causal feature storage. Hard temporal block: computation may only ever
- * read historicalSeries elements with timestamp <= targetTime. There is
- * no code path here that indexes past the causal boundary — the boundary
- * index is found once, up front, and every loop below is bounded by it.
+ * Causal feature storage. Hard temporal block keyed on AVAILABILITY, not
+ * the bar's open timestamp:
+ *
+ *   availability(bar) = bar.timestamp + barDurationSeconds
+ *
+ * Exchange OHLCV stamps the bar's OPEN. A bar's close/high/low are not
+ * KNOWN until the bar closes, i.e. at open_ts + bar_duration. Keying the
+ * block on the open timestamp would let a bar be used a full bar-duration
+ * before its data actually exists — the data-layer twin of the same-bar
+ * fill leak. So a bar may be used only when availability(bar) <= targetTime.
+ *
+ * Caller convention: to compute features "as of the close of bar t" (the
+ * moment the signal is decided), request targetTime = availability(t) =
+ * t.timestamp + barDurationSeconds — which includes bar t (equality) but
+ * NOT bar t+1. A request even one tick earlier than bar t's close excludes
+ * bar t entirely.
  *
  * EMA (IIR) uses its lookbackPeriods as a smoothing span, not a hard
  * window — it recurses over the FULL causal history available, per
@@ -12,17 +24,27 @@ import { FEATURE_REGISTRY, type CompactCandle } from "@sol-edge/core";
  * RSI (Wilder's) uses lookbackPeriods as a literal fixed window.
  */
 export class FeatureEngine {
-  public static getFeatureSlice(featureName: string, targetTime: number, historicalSeries: readonly CompactCandle[]): number {
+  public static getFeatureSlice(
+    featureName: string,
+    targetTime: number,
+    historicalSeries: readonly CompactCandle[],
+    barDurationSeconds: number,
+  ): number {
     const definition = FEATURE_REGISTRY[featureName];
     if (!definition) {
       throw new Error(`FeatureEngine: unknown feature "${featureName}" — not present in FEATURE_REGISTRY`);
     }
+    if (!(barDurationSeconds > 0)) {
+      throw new Error(`FeatureEngine: barDurationSeconds must be > 0, got ${barDurationSeconds}`);
+    }
 
-    // Find the causal boundary: the last index whose timestamp <= targetTime.
-    // historicalSeries is assumed sorted ascending by timestamp.
+    // Find the causal boundary: the last index whose AVAILABILITY (open
+    // timestamp + bar duration) is <= targetTime. historicalSeries is
+    // assumed sorted ascending by timestamp.
     let boundaryIndex = -1;
     for (let i = 0; i < historicalSeries.length; i++) {
-      if (historicalSeries[i].timestamp <= targetTime) {
+      const availability = historicalSeries[i].timestamp + barDurationSeconds;
+      if (availability <= targetTime) {
         boundaryIndex = i;
       } else {
         break;
@@ -31,7 +53,7 @@ export class FeatureEngine {
 
     if (boundaryIndex === -1) {
       throw new Error(
-        `FeatureEngine: temporal violation — no data with timestamp <= ${targetTime} exists; computing "${featureName}" would require reading a future index`,
+        `FeatureEngine: temporal violation — no bar is available (closed) by targetTime ${targetTime}; computing "${featureName}" would require a bar whose close is still in the future`,
       );
     }
 

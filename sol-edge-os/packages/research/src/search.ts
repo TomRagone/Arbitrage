@@ -26,15 +26,16 @@ export interface RankedStrategy {
 // provide). Same modest values already used and reasoned about throughout
 // this phase's verify scripts — not new guesses.
 const DEFAULT_COUNT = 200;
-const DEFAULT_SIM_CONFIG: SimConfig = { alpha: 0.0005, beta: 0.1, gammaPanic: 1.5, kappaImpact: 0.02, fixedFeeRate: 0.0004 };
-const DEFAULT_FRICTION_PARAMS: FrictionParams = { sigmaEntry: 0.02, sigmaExit: 0.02, quantity: 1000, adv: 1000000 };
+export const DEFAULT_SIM_CONFIG: SimConfig = { alpha: 0.0005, beta: 0.1, gammaPanic: 1.5, kappaImpact: 0.02, fixedFeeRate: 0.0004 };
+export const DEFAULT_FRICTION_PARAMS: FrictionParams = { sigmaEntry: 0.02, sigmaExit: 0.02, quantity: 1000, adv: 1000000 };
 
 /// Precomputes a features array for a candle segment, using the FULL
 /// (train+test+holdout) series for causal lookback — a candle at the start
 /// of test legitimately sees train's tail history (still strictly causal,
 /// since train always precedes test in time); only this segment's own
-/// candles are ever passed to the kernel for trading.
-function computeFeatures(segment: readonly CompactCandle[], fullSeries: readonly CompactCandle[], featureKeys: readonly string[]): Record<string, number>[] {
+/// candles are ever passed to the kernel for trading. Exported (Step 9.8)
+/// so holdout.ts reuses this rather than duplicating it.
+export function computeFeatures(segment: readonly CompactCandle[], fullSeries: readonly CompactCandle[], featureKeys: readonly string[]): Record<string, number>[] {
   return segment.map((c) => {
     const record: Record<string, number> = {};
     for (const key of featureKeys) record[key] = FeatureEngine.getFeatureSlice(key, c.timestamp, fullSeries);

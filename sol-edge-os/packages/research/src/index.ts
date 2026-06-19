@@ -8,7 +8,13 @@ export {
   DEFAULT_FRICTION_PARAMS,
   type RankedStrategy,
 } from "./search";
-export { linearGrid, generateDepth1Strategies, describeStrategy, type Depth1Feature } from "./exhaustiveGenerator";
+export {
+  linearGrid,
+  generateDepth1Strategies,
+  generateDepth2CrossFeatureStrategies,
+  describeStrategy,
+  type Depth1Feature,
+} from "./exhaustiveGenerator";
 export { runStrategyExecution, type BacktestExecutionResult } from "./run";
 export { evaluateHoldoutOnce } from "./holdout";
 export { splitChronological, assertNoOverlap, type TemporalSplit } from "./split";

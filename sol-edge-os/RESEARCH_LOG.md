@@ -283,3 +283,43 @@ committed search on this question would need a different search space
 (depth, features, or combinators), and would be logged as
 committed-search #3 per §5. The 2,160-bar holdout remains untouched and
 available for that future search.
+
+### Phase 10C-003 — Real pre-registered search #3 (depth-2 cross-feature conjunctions, rsi_14 AND ema_ratio_20)
+**Q:** Does a depth-2 conjunction of `rsi_14` and `ema_ratio_20` — a
+trend-context condition confirming a mean-reversion trigger, or vice
+versa — show significant OOS edge where the corresponding depth-1
+single-condition rules (10C-001, 10C-002) did not? Full pre-registration
+record: `docs/preregistration/10C-003-depth2-conjunctions.md`.
+**Method:** `apps/worker/scripts/search-10c-3.ts`, same process as
+10C-002 (same `trades_resampled` series, same 2,160-bar pre-carved
+holdout, same 8-fold walk-forward, same pooled-OOS significance design).
+New: a depth-2 generator
+(`generateDepth2CrossFeatureStrategies`, `packages/research/src/exhaustiveGenerator.ts`)
+enumerating cross-feature-only leaf pairs (one `rsi_14` leaf AND one
+`ema_ratio_20` leaf — same-feature pairs explicitly excluded) — 50 × 82 ×
+2 sides = 8,200 candidates. Exit is the De Morgan negation of the entry
+(`NOT(A) OR NOT(B)`), expressed directly via the existing `or` BoolExpr
+node, zero new searched parameters. Pre-run sanity check (generate +
+validate all candidates, confirm count == 8,200 exactly, visually
+inspect example LONG/SHORT candidates) passed before the full run.
+**Result:** Null. Full run completed in ~8 seconds. Per-fold "best"
+candidates cluster around 1-2 trades for 7 of 8 folds (fold 0: 8 trades,
+fold 7: 16 trades, the two exceptions, both using looser thresholds) —
+the AND conjunction is materially more restrictive than any depth-1
+condition, firing far less often. Top-ranked by pooled OOS expectancy:
+SHORT, `(rsi_14 > 75 AND ema_ratio_20 < 0.993)` — 117.47bps/trade on
+**1 pooled trade**. `isSignificant` correctly short-circuits to false
+(1 trade, far below the 10-trade floor) before a DSR value is even
+computed. Holdout **not evaluated** — no candidate cleared significance.
+**Conclusion:** A real, structural null — not a data-volume problem
+(same 10,795-bar series as 10C-002) and not a significance-gate failure
+either; the gate worked exactly as designed, catching a 1-trade outlier
+before it could masquerade as a finding. The depth-2 cross-feature
+conjunction hypothesis, ranked by raw pooled expectancy, is dominated by
+sparse-signal overfitting rather than producing a real, adequately-
+sampled edge. A fourth committed search on a related question (e.g. a
+trade-count-aware ranking objective, or a different feature pair/
+combinator) would need its own pre-registration and would be logged as
+committed-search #4 per §5. The 2,160-bar holdout remains untouched and
+available.
+

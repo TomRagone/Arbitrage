@@ -381,3 +381,44 @@ trend/momentum-confirming condition on `rsi_14` or `ema_ratio_20`),
 which would directly test whether filtering removes the churn — logged
 as committed-search #5 per §5 if run. The 2,160-bar holdout remains
 untouched and available.
+
+### Phase 10C-005 — Real pre-registered search #5 (breakout AND confirmation, testing whether filtering removes 10C-004's whipsaw)
+**Q:** Does requiring a breakout to be simultaneously confirmed by
+`rsi_14` or `ema_ratio_20` remove the immediate-reversal whipsaw churn
+observed in 10C-004 (median holding period 1 bar)? Full pre-registration
+record: `docs/preregistration/10C-005-breakout-confirmed.md`.
+**Method:** `apps/worker/scripts/search-10c-5.ts`. 14 breakout leaves
+(10C-004's 14 candidates, used as AND legs) × 132 confirmation leaves
+(10C-003's `rsi_14`/`ema_ratio_20` pool) = 1,848 candidates, exhaustive,
+sanity-checked (count + visual construction) before the run. Same
+process otherwise (holdout, 8-fold walk-forward, pooled-OOS ranking) as
+10C-002/003/004.
+**Result:** Null, with the same sparsity signature as 10C-003 — the raw
+top-10 are 1-2 trade flukes. Honesty check on the 1,193 of 1,848
+candidates with ≥10 pooled trades: best is LONG `breakout_high_50 AND
+rsi_14<60`, +22.19bps/trade, 12 trades, 1.11% max drawdown — far too few
+trades to claim significance, but every candidate in this subset has a
+small max drawdown (1.11-3.93%), dramatically lower than 10C-004's
+unfiltered 33-86%. The decisive diagnostic: that same 12-trade
+candidate's holding period is **mean 1.25 bars, median 1 bar, 83.3% held
+exactly 1 bar** `[1,1,1,1,1,1,1,1,1,1,2,3]` — statistically
+indistinguishable from 10C-004's unfiltered whipsaw signature. Holdout
+**not evaluated** — nothing cleared significance.
+**Conclusion:** The confirmation filter does NOT fix the whipsaw
+mechanism, which is itself a real, decisive finding — not an
+inconclusive one. It reduces trade frequency and loss severity (fewer,
+smaller-drawdown entries) by filtering *which* breakouts fire, but the
+core failure mode (enter on a level cross, reverse out almost
+immediately) persists essentially unchanged even when confirmed. This
+points at the exit/holding-period design itself — mechanical negation
+re-fires the exit the instant the level is recrossed, exactly when
+whipsaw happens, confirmed or not — not at a missing confirmation
+signal. Three tested hypothesis classes now stand empty on this overall
+question: pure mean-reversion (10C-001/002), conjunctive mean-reversion
+(10C-003), and naive/confirmed momentum (10C-004/005). Per policy and by
+deliberate choice, this is a legitimate point to consolidate rather than
+keep generating new feature combinations in this universe — a sixth
+committed search would need a structurally different exit/holding model,
+not another feature pairing, and would be logged as committed-search #6
+per §5 if pursued. The 2,160-bar holdout remains untouched and available
+across all five searches to date.

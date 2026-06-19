@@ -116,3 +116,48 @@ numbers — `DEFAULT_SIM_CONFIG`/`DEFAULT_FRICTION_PARAMS`
 through this apparatus inherits it automatically. Not a strategy result:
 no edge claim made or implied here, and this doesn't touch the
 pre-registration ledger. 10C (the real pre-registered search) is next.
+
+### Phase 10C — Real pre-registered search (depth-1, rsi_14/ema_ratio_20)
+**Q:** Does any depth-1 rule on `rsi_14` or `ema_ratio_20`, on Kraken
+SOL/USDT 1h with real calibrated friction (Phase 10B), show significant
+out-of-sample edge? Full pre-registration record:
+`docs/preregistration/10C-depth1-rsi-ema.md`.
+**Method:** Exhaustive enumeration (no sampling) of 264 candidates —
+`rsi_14` (25 thresholds, 20–80) × `ema_ratio_20` (41 thresholds,
+0.98–1.02) × {gt,lt} × {LONG,SHORT}, exit fixed as the mechanical
+negation of each entry comparison (zero extra searched parameters). Run
+once via `apps/worker/scripts/search-10c.ts` over a 60/20/20 chronological
+split, ranked by OOS expectancy, gated by the existing Deflated Sharpe
+Ratio significance check (`packages/research/src/significance.ts`,
+threshold 0.95, minimum 10 OOS trades). A 480h/120h/120h walk-forward was
+also run as a per-fold stability diagnostic, not as the significance
+claim itself.
+**Result:** Null. Top-ranked candidate (SHORT, `ema_ratio_20 > 0.98` /
+`< 0.98`) scored 92.84bps/trade OOS — but on only 2 OOS trades, far below
+the 10-trade significance floor, so `isSignificant` returned false before
+a DSR was even meaningfully computable. The walk-forward fared worse: only
+2 real folds fit, each containing exactly 1 trade for its "best of 264"
+candidate — noise, not signal. Holdout was correctly never touched (no
+candidate cleared significance). Full PRE/RESULT record in the
+pre-registration file above.
+**Standing platform constraint (not specific to this run):** Kraken's
+public OHLCV endpoint — confirmed via both the native client (`getOHLC`,
+`STEP4_STRATEGY_SPEC.md` Addendum 1) and now via ccxt's `fetchOHLCV`
+(`ingestOHLCV`) — caps real 1h history for SOL/USDT at roughly 720–750
+bars (~30 days), regardless of how far back `since` is requested. This is
+a hard ceiling on this venue/pair/resolution, not a fetch-window choice.
+It is the binding constraint on every walk-forward/holdout design at 1h
+going forward: a 60/20/20 split of ~750 bars leaves only ~150 OOS bars,
+too few for most depth-1 rules to clear a 10-trade significance floor,
+and a 480h/120h walk-forward barely fits 2 folds. Any future real-data
+search at 1h on this pair inherits this ceiling; a higher resolution
+(4h/1d) trades it for fewer bars per unit of wall-clock history but a
+longer real calendar span per bar (per the same reasoning as
+`STEP4_STRATEGY_SPEC.md` Addendum 1's trend-timeframe scaling), so
+resolution choice for any future committed search should account for
+this explicitly rather than re-discovering it mid-run.
+**Conclusion:** Null result accepted at the committed budget (264
+trials) — not a cue to re-roll. A second committed search on this
+question would need to first repair the data-availability precondition
+(longer real history via a different resolution and/or pair), and would
+be logged as committed-search #2 per §5 of the pre-registration policy.

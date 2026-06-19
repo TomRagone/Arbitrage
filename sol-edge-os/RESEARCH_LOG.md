@@ -215,3 +215,71 @@ non-equivalent in both `registry.ts` and
 holdout evaluation, or significance testing. No kernel-extension work has
 been scoped or started; that is a deliberate stopping point, not an
 oversight.
+
+### Phase 10C.1 — Trades-resampled ingestion (repairs 10C-001's data ceiling)
+**Q:** Can Kraken's real 1h history for SOL/USDT be extended past the
+~745-bar OHLC-endpoint ceiling that capped 10C-001's significance test
+before it could even run meaningfully?
+**Method:** Built `resampleTradesToOHLCV` + `ingestTradesResampled`
+(`apps/worker/scripts/ingest-trades-resampled.ts`), which paginates
+Kraken's public Trades endpoint (genuine deep pagination, unlike the OHLC
+endpoint) and resamples raw trades into 1h bars, stored alongside the
+existing `source = 'ohlc'` rows under `source = 'trades_resampled'` in
+the same `ohlcv_candles` table. Added `ema_ratio_20` (close/ema20) to
+`FeatureEngine`/the registry as a real, wired computation. Before
+committing, independently re-verified by execution (not just review):
+row count/date range, `validateDataIntegrity` (10A.2) against the
+filtered series, `markTradeable` (10A.3) against both real gaps found,
+a full workspace typecheck, and that `ema_ratio_20` actually computes
+(not a registry stub).
+**Result:** 10,795 bars, 2025-03-26T14:00:00Z .. 2026-06-19T14:00:00Z —
+~14.5x 10C-001's depth. Zero hard integrity violations. 2 real gaps (1 +
+5 missing hourly bars). Gap policy confirmed live: every bar in the
+20-bar lookback window after each gap is excluded, no forward-fill,
+window re-validates 20 consecutive gap-free bars later. Workspace
+typechecks clean.
+**Conclusion:** This is a §2 setup-precondition repair, not a re-roll —
+10C-001's null was a data-volume technicality, not an answer to the
+hypothesis. Committed (this is purely apparatus work, no candidate was
+scored). Cleared the way for 10C-002, a second committed search on the
+same question per §5.
+
+### Phase 10C-002 — Real pre-registered search #2 (depth-1, rsi_14/ema_ratio_20, repaired data depth)
+**Q:** Same question as 10C-001 (does any depth-1 rule on `rsi_14` or
+`ema_ratio_20` show significant OOS edge on Kraken SOL/USDT 1h after real
+calibrated friction?), now with the data-availability precondition
+repaired (Phase 10C.1). Full pre-registration record:
+`docs/preregistration/10C-002-depth1-rsi-ema.md`.
+**Method:** `apps/worker/scripts/search-10c-2.ts` reads ONLY
+`source = 'trades_resampled'` from the local sqlite store via
+`@sol-edge/database`'s `readOHLCV` (no live OHLC-endpoint call — that's
+exactly what produced 10C-001's ceiling). A 2,160-bar (90-day) holdout is
+carved from the most recent data FIRST, before any fold is built. The
+remaining 8,635 bars are walk-forwarded (2160h train / 720h test / 720h
+step) into 8 folds. Same 264-candidate exhaustive depth-1 grid as
+10C-001 (`rsi_14` 25 thresholds, `ema_ratio_20` 41 thresholds, gt/lt,
+LONG/SHORT, exit = mechanical negation). Each candidate's OOS (test)
+returns are pooled across all 8 folds (chronologically concatenated,
+folds are non-overlapping and time-ordered) into one cross-fold OOS
+series — this pooled series, not any single fold or a separate split, is
+what `isSignificant`/DSR is computed against.
+**Result:** Per-fold best candidate varies fold to fold (range
+2.62-791.50bps/trade, 4-12 trades) — classic walk-forward instability at
+this per-fold sample size, reported as a diagnostic only. Top-ranked by
+pooled OOS expectancy: SHORT, `rsi_14 > 20` / `< 20` — 27.75bps/trade,
+**66 pooled trades**, max drawdown 38.71%. 66 trades clears the 10-trade
+significance floor (unlike 10C-001's 2), but DSR falls below 0.95 — the
+positive mean return doesn't survive the 264-trial multiple-testing
+deflation given the return variance/drawdown. Holdout (2026-03-21 ..
+2026-06-19, 2,160 bars) **not evaluated** — no candidate cleared
+significance, so per the pre-registered rule it stays untouched.
+**Conclusion:** Null result, but a structurally stronger null than
+10C-001's — this time the search had enough real OOS trades to make an
+actual significance call, and it still didn't clear. Data depth is no
+longer the binding constraint; the depth-1 `rsi_14`/`ema_ratio_20`
+hypothesis itself, at 1h resolution with real calibrated friction, is the
+answer at this budget. Not a cue to re-roll with more data — a third
+committed search on this question would need a different search space
+(depth, features, or combinators), and would be logged as
+committed-search #3 per §5. The 2,160-bar holdout remains untouched and
+available for that future search.

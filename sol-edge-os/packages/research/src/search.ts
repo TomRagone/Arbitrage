@@ -84,22 +84,25 @@ export function evaluateCandidate(
   return { trainStats, testStats, testReturns };
 }
 
-export function runSearch(
-  space: SearchSpace,
-  seed: number,
+/// Evaluates and ranks an explicit, already-built candidate list — the
+/// shared tail end of any search, whether the candidates came from
+/// generateStrategies' random sampling (runSearch, below) or from an
+/// exhaustive enumeration (e.g. Phase 10C's depth-1 grid search). `trials`
+/// on every RankedStrategy is candidates.length — the committed count for
+/// whatever generated this list, not re-derived here.
+export function rankCandidates(
+  candidates: readonly StrategyDSL[],
   split: TemporalSplit,
-  count: number = DEFAULT_COUNT,
+  featureKeys: readonly string[],
   simConfig: SimConfig = DEFAULT_SIM_CONFIG,
   frictionParams: FrictionParams = DEFAULT_FRICTION_PARAMS,
 ): readonly RankedStrategy[] {
-  const candidates = generateStrategies(space, seed, count);
-
   // Features computed ONCE, shared across all candidates (they don't
   // depend on the strategy, only on candles + featureKeys) — not
   // recomputed per candidate.
   const fullSeries = [...split.train, ...split.test, ...split.holdout]; // holdout is NEVER passed to the kernel below, only used for causal feature lookback continuity
-  const trainFeatures = computeFeatures(split.train, fullSeries, space.featureKeys);
-  const testFeatures = computeFeatures(split.test, fullSeries, space.featureKeys);
+  const trainFeatures = computeFeatures(split.train, fullSeries, featureKeys);
+  const testFeatures = computeFeatures(split.test, fullSeries, featureKeys);
 
   const ranked: RankedStrategy[] = candidates.map((strategy) => {
     const { trainStats, testStats, testReturns } = evaluateCandidate(strategy, split.train, trainFeatures, split.test, testFeatures, simConfig, frictionParams);
@@ -111,4 +114,16 @@ export function runSearch(
   ranked.sort((a, b) => b.testStats.simulatedExpectancy - a.testStats.simulatedExpectancy);
 
   return ranked;
+}
+
+export function runSearch(
+  space: SearchSpace,
+  seed: number,
+  split: TemporalSplit,
+  count: number = DEFAULT_COUNT,
+  simConfig: SimConfig = DEFAULT_SIM_CONFIG,
+  frictionParams: FrictionParams = DEFAULT_FRICTION_PARAMS,
+): readonly RankedStrategy[] {
+  const candidates = generateStrategies(space, seed, count);
+  return rankCandidates(candidates, split, space.featureKeys, simConfig, frictionParams);
 }

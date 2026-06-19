@@ -42,7 +42,7 @@ async function main() {
   const ingestResult = await ingestOHLCV(cfg, fromTs, toTs);
   console.log(`  Ingested/verified ${ingestResult.count} bars (storeHash ${ingestResult.storeHash.slice(0, 12)}...).`);
 
-  const rows = readOHLCV(cfg, fromTs, toTs);
+  const rows = readOHLCV(cfg, "ohlc", fromTs, toTs);
   if (rows.length < 2) {
     throw new Error(`calibrate-friction: only ${rows.length} bar(s) available — need at least 2 to compute a return series`);
   }

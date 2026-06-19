@@ -7,6 +7,10 @@ export interface FeatureDefinition {
 export const FEATURE_REGISTRY: Readonly<Record<string, FeatureDefinition>> = Object.freeze({
   rsi_14: { name: "rsi_14", lookbackPeriods: 14, alignment: "strict-left" },
   ema_20: { name: "ema_20", lookbackPeriods: 20, alignment: "strict-left" },
+  // close / EMA20 — lets a depth-1 gt/lt rule express "price N% above/below
+  // its EMA" entirely within the existing ValueExpr vocabulary (const/
+  // feature/price only), with no new BoolExpr node type required.
+  ema_ratio_20: { name: "ema_ratio_20", lookbackPeriods: 20, alignment: "strict-left" },
   // --- EXPLORATORY. NON-EQUIVALENT. NOT FOR SEARCH OR SIGNIFICANCE USE. ---
   // The five entries below were registered for a best-effort, partial
   // translation of strategyEngine.ts's entry logic into a StrategyDSL

@@ -1,7 +1,7 @@
 /**
- * Kraken public market-data client. Read-only: ticker + OHLC only.
- * No API keys, no signed requests, no order endpoints — this file must
- * never grow an order-placement function.
+ * Kraken public market-data client. Read-only: ticker, OHLC, and trades
+ * only. No API keys, no signed requests, no order endpoints — this file
+ * must never grow an order-placement function.
  */
 const KRAKEN_PUBLIC_BASE = "https://api.kraken.com/0/public";
 
@@ -96,4 +96,45 @@ export async function getOHLC(pair = "SOLUSD", interval = 1): Promise<Candle[]> 
     volume: Number(volume),
     count,
   }));
+}
+
+export interface Trade {
+  readonly price: number;
+  readonly volume: number;
+  readonly timestamp: number; // unix seconds, sub-second precision preserved
+  readonly side: "buy" | "sell";
+}
+
+export interface TradesPage {
+  readonly trades: readonly Trade[];
+  readonly last: string; // opaque cursor — pass as `since` to fetch the next page
+}
+
+type KrakenTradeRow = [string, string, number, "b" | "s", string, string, number];
+
+/// One page of raw trades for a Kraken spot pair, the `since` cursor for
+/// the next page chained from the previous page's `last` (Kraken's public
+/// Trades endpoint supports deep pagination via this cursor — unlike the
+/// OHLC endpoint, which only ever returns its most recent ~720 bars
+/// regardless of `since`, confirmed during Phase 10C). count caps the page
+/// size (Kraken's max is 1000).
+export async function getTrades(pair: string, since: string | number, count = 1000): Promise<TradesPage> {
+  const result = await krakenGet<Record<string, KrakenTradeRow[] | string>>("Trades", {
+    pair,
+    since: String(since),
+    count: String(count),
+  });
+  const rows = Object.entries(result).find(([key]) => key !== "last")?.[1];
+  const last = result.last;
+  if (!Array.isArray(rows) || typeof last !== "string") throw new Error(`Kraken Trades returned no data for pair ${pair}`);
+
+  return {
+    trades: rows.map(([price, volume, timestamp, side]) => ({
+      price: Number(price),
+      volume: Number(volume),
+      timestamp,
+      side: side === "b" ? "buy" : "sell",
+    })),
+    last,
+  };
 }

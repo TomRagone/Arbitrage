@@ -39,7 +39,7 @@ async function main() {
   const toTs = Math.floor(Date.now() / 1000);
   const fromTs = toTs - WINDOW_DAYS * 86400;
 
-  const rows = readOHLCV(cfg, fromTs, toTs);
+  const rows = readOHLCV(cfg, "ohlc", fromTs, toTs);
   if (rows.length < 50) {
     throw new Error(`reality-gap-report: only ${rows.length} bars available — run calibrate-friction.ts (or ingest more history) first`);
   }

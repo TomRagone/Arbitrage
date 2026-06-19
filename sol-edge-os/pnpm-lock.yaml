@@ -104,6 +104,9 @@ importers:
       '@sol-edge/core':
         specifier: workspace:*
         version: link:../core
+      '@sol-edge/exchanges':
+        specifier: workspace:*
+        version: link:../exchanges
       ccxt:
         specifier: ^4.4.0
         version: 4.5.59

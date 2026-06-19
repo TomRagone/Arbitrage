@@ -22,6 +22,8 @@
     "timeframe-sweep": "tsx --env-file=../../packages/db/.env scripts/timeframe-sweep.ts",
     "calibrate-friction": "tsx scripts/calibrate-friction.ts",
     "reality-gap-report": "tsx scripts/reality-gap-report.ts",
+    "search-10c": "tsx scripts/search-10c.ts",
+    "ingest-trades-resampled": "tsx scripts/ingest-trades-resampled.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

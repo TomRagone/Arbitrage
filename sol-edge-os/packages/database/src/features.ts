@@ -68,6 +68,8 @@ export class FeatureEngine {
       case "rsi_14":
       case "rsi":
         return computeRsi(causalCloses, definition.lookbackPeriods);
+      case "ema_ratio_20":
+        return causalCloses[causalCloses.length - 1] / computeEma(causalCloses, definition.lookbackPeriods);
       default:
         throw new Error(`FeatureEngine: feature "${featureName}" is registered but has no computation implemented`);
     }

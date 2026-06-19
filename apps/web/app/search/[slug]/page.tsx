@@ -1,0 +1,131 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getPreRegistrationRecord } from "@/lib/preregistration";
+
+export default async function SearchDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const record = getPreRegistrationRecord(slug);
+  if (!record) notFound();
+
+  return (
+    <>
+      <Link href="/">&larr; all searches</Link>
+      <h1 className="mono">{record.runId}</h1>
+      <p className="subtitle">{record.question}</p>
+
+      <h2>PRE (committed before the run)</h2>
+      <dl className="card">
+        <div className="field">
+          <dt>Committed-search #</dt>
+          <dd>{record.committedSearchNumber || "—"}</dd>
+        </div>
+        <div className="field">
+          <dt>Search space size</dt>
+          <dd className="mono">{record.searchSpaceSize ? `${record.searchSpaceSize} candidates` : "—"}</dd>
+        </div>
+        <div className="field">
+          <dt>Enumerate / sample decision</dt>
+          <dd>{record.decision || "—"}</dd>
+        </div>
+        <div className="field">
+          <dt>Holdout (as pre-registered)</dt>
+          <dd>{record.preHoldoutDescription || "—"}</dd>
+        </div>
+      </dl>
+
+      <h2>RESULT</h2>
+      {!record.hasResult ? (
+        <p className="empty">No RESULT recorded yet — this search is in progress or has not been run.</p>
+      ) : (
+        <>
+          <dl className="card">
+            <div className="field">
+              <dt>Data used</dt>
+              <dd>{record.dataUsed}</dd>
+            </div>
+            <div className="field">
+              <dt>Holdout</dt>
+              <dd>{record.resultHoldoutDescription}</dd>
+            </div>
+          </dl>
+
+          <h3>Per-fold results</h3>
+          {record.foldResults.length > 0 ? (
+            <>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fold</th>
+                    <th>OOS expectancy (bps/trade)</th>
+                    <th>Trades</th>
+                    <th>Rule</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {record.foldResults.map((f, i) => (
+                    <tr key={i}>
+                      <td className="mono">{f.fold}</td>
+                      <td className="mono">{f.expectancyBps}</td>
+                      <td className="mono">{f.trades}</td>
+                      <td className="mono">{f.rule}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {record.foldNote && <p className="subtitle">{record.foldNote}</p>}
+            </>
+          ) : (
+            <p className="empty">No per-fold table parsed.</p>
+          )}
+
+          <h3>Pooled / significance-bearing result</h3>
+          <dl className="card">
+            <div className="field">
+              <dt>Top candidate</dt>
+              <dd className="mono">{record.pooledTopCandidate}</dd>
+            </div>
+            <div className="field">
+              <dt>OOS expectancy</dt>
+              <dd className="mono">{record.pooledOosExpectancy}</dd>
+            </div>
+            <div className="field">
+              <dt>OOS trades</dt>
+              <dd className="mono">{record.pooledOosTrades}</dd>
+            </div>
+            <div className="field">
+              <dt>OOS max drawdown</dt>
+              <dd className="mono">{record.pooledOosMaxDrawdown}</dd>
+            </div>
+            <div className="field">
+              <dt>Trials (committed N)</dt>
+              <dd className="mono">{record.trialsCommittedN}</dd>
+            </div>
+            <div className="field">
+              <dt>DSR verdict</dt>
+              <dd>
+                <span className={`badge badge-${record.status}`}>
+                  {/significant:\s*yes/i.test(record.dsrVerdict) ? "significant" : "not significant"}
+                </span>{" "}
+                {record.dsrVerdict}
+              </dd>
+            </div>
+            <div className="field">
+              <dt>Holdout status</dt>
+              <dd>
+                {/untouched/i.test(record.holdoutStatus) ? (
+                  <span className="badge badge-in-progress">locked, untouched</span>
+                ) : (
+                  <span className="badge badge-significant">evaluated once</span>
+                )}{" "}
+                {record.holdoutStatus}
+              </dd>
+            </div>
+          </dl>
+
+          <h3>Conclusion</h3>
+          <p className="prose">{record.conclusion}</p>
+        </>
+      )}
+    </>
+  );
+}

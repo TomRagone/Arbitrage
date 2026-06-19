@@ -1,0 +1,8 @@
+{
+  "mode": "paper",
+  "live": {
+    "liveConfirmed": false,
+    "requiredEnvVars": ["EXCHANGE_KEY", "EXCHANGE_SECRET"]
+  },
+  "_lockNote": "mode is one of paper|shadow|live, default paper. This file alone can NEVER enable live trading: mode=\"live\" additionally requires live.liveConfirmed=true in this file AND every var in live.requiredEnvVars present in the environment (apps/live-engine/src/config.ts enforces both, synchronously, before any venue is constructed or any network call is made). Flipping liveConfirmed to true here without the env vars present is still refused. This is a deliberate, logged, per-run opt-in — not a default anyone can drift into."
+}

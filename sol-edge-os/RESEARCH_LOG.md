@@ -161,3 +161,57 @@ trials) — not a cue to re-roll. A second committed search on this
 question would need to first repair the data-availability precondition
 (longer real history via a different resolution and/or pair), and would
 be logged as committed-search #2 per §5 of the pre-registration policy.
+
+### AST-kernel DSL translation — structural gaps
+**Q:** Can `strategyEngine.ts`'s entry/exit logic (the analytics-side
+trend/breakout strategy) be expressed as a `StrategyDSL` `BoolExpr` tree
+and run through `runAstKernel`, the validated causal research engine?
+**Method:** Read `strategyEngine.ts` and `lifecycle.ts` in full, enumerated
+every entry and exit condition, and attempted to map each one onto the
+kernel's existing grammar (`packages/core/src/types.ts`:
+`ValueExpr`/`BoolExpr`/`StrategyDSL`) and `EvalContext`
+(`packages/core/src/evaluator.ts`).
+**Result:** The trend-bias, breakout-level, and ATR-volatility conditions
+mapped cleanly onto new registry features (`ema_50`, `breakout_high_20`,
+`breakout_low_20`, `atr_14`, `atr_sma_20` — `packages/core/src/registry.ts`)
+and a `BoolExpr` tree (see `packages/research/src/strategyEngineDslTranslation.ts`,
+itself labeled exploratory/non-equivalent). Five conditions, however, do
+not fit the current DSL/kernel grammar at all:
+1. **Anti-chase (`isFirstOccurrence`)** — requires "condition true at bar
+   `i`, false at bar `i-1`." `BoolExpr`/`ValueExpr` have no lag/shift
+   operator and no way to reference a prior bar's evaluated state; every
+   node resolves only against the current `EvalContext`. Omitted from the
+   translation — a real behavioral deviation, not just an approximation.
+2. **Multi-timeframe trend filter** — `strategyEngine.ts` computes its
+   EMA50 trend bias on a separate 1H candle series while breakout/ATR run
+   on 15m. `EvalContext`/`FeatureEngine`/`CompactCandle[]` are
+   single-series only; there is no cross-timeframe context anywhere in
+   the kernel. The registered `ema_50` is a same-series (15m)
+   approximation, numerically different from the real signal.
+3. **Volume filter** (`volume[i] > SMA20(volume)[i]`) — `CompactCandle`
+   has only `timestamp/open/high/low/close`; there is no `volume` field
+   and `ValueExpr.price.field` only allows `open|high|low|close`. Not
+   expressible without a core type change. No volume feature was
+   registered (no candle-level volume source exists to compute it from).
+4. **Exit/TP ladder** (1R/2R/3R, partial scale-outs, stop-to-breakeven)
+   — lives entirely in `lifecycle.ts`, not `strategyEngine.ts`. It is
+   intrabar (checks high/low against fixed price levels), multi-leg
+   (TP1/TP2 leave the position partially open), and stateful (levels
+   fixed at entry). `runAstKernel`'s exit model is a single boolean
+   evaluated once per bar close with a binary in/out position state —
+   incompatible by construction. No placeholder substitute is a real
+   translation of this logic.
+5. **Portfolio-level risk caps / position sizing** (`maxOpenPositions`,
+   `maxTradesPerDay`, ATR-based stop sizing) — stateful, account-level
+   logic with no portfolio context in `EvalContext`. Out of scope for
+   `BoolExpr` by design; correctly absent from the translation.
+**Conclusion:** A faithful, complete translation of `strategyEngine.ts`
+into the current `StrategyDSL` grammar is not possible without extending
+the kernel: adding a lag/shift operator, multi-series context, a volume
+field, and a richer exit/position model. The partial translation
+committed alongside this entry is exploratory only — explicitly labeled
+non-equivalent in both `registry.ts` and
+`strategyEngineDslTranslation.ts` — and must not be used for search,
+holdout evaluation, or significance testing. No kernel-extension work has
+been scoped or started; that is a deliberate stopping point, not an
+oversight.

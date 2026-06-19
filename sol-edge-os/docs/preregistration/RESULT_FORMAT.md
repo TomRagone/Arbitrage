@@ -42,3 +42,9 @@ needs to change.
 This convention starts with 10C-001 and 10C-002 (both retroactively
 reformatted to match, same numbers, no figures changed) and is binding for
 10C-003 onward.
+
+**Binding going forward:** write the RESULT section in this shape directly
+when 10C-003 (and every search after it) is filled in — there is no
+reformat-after-the-fact step anymore. Writing a new result in the old
+free-form bullet style and reformatting it later is no longer the
+convention; just use this shape from the start.

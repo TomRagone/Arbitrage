@@ -24,11 +24,26 @@
 - Significance: DSR threshold = 0.95, using the empirical-variance-based Deflated Sharpe Ratio already implemented in `packages/research/src/significance.ts` (Bailey & López de Prado), not a closed-form √(2·ln N) plug-in. Minimum 10 out-of-sample trades required before any significance claim is attempted (`MIN_SAMPLE_LENGTH` in that same file — pre-existing, not introduced for this run).
 
 ## RESULT (fill after; do not edit the PRE block)
-- Data actually available: 745 bars ingested, 0 gaps, full series used as the one gap-free segment — 2026-05-19T13:00:00Z .. 2026-06-19T13:00:00Z. Confirms the PRE block's ~720-bar ceiling note. Split: train=447 / test=149 / holdout=149 bars.
-- Walk-forward (480h train / 120h test / 120h step): only 2 real folds fit in 745 bars. Fold 0 best OOS: 434.65bps/trade on 1 trade. Fold 1 best OOS: 450.35bps/trade on 1 trade. Single-trade "best of 264" per fold is noise, not a finding — reported for completeness per the brief, not used for any claim.
-- Top strategy (60/20/20 split, ranked by OOS expectancy): SHORT, enter when `ema_ratio_20 > 0.98`, exit when `ema_ratio_20 < 0.98`.
-- Train stats: 139.83bps/trade, 17 trades (diagnostic only, not the selection key). Test (OOS) stats: 92.84bps/trade, 2 trades, max drawdown 1.10%.
-- trials used: 264. DSR: not meaningfully computable — test-segment trade count (2) is below `MIN_SAMPLE_LENGTH` (10), so `isSignificant` short-circuits to false before computing a DSR value.
-- Significant? **N.**
-- Holdout result: **not evaluated** — per the pre-registered rule, the holdout is touched only if a candidate clears significance. None did, so it remains untouched.
-- Conclusion: null result at the committed budget. The binding constraint is data volume, not the search space or the friction model: 745 bars split 60/20/20 leaves only ~149 OOS bars, too few for any depth-1 rule (mean-reversion entries on a 1h RSI/EMA-ratio threshold) to produce enough trades to clear the 10-trade significance floor. This is the answer for this question at this budget, not a cue to re-roll with a different N, grid, or split — a second committed search on this question would need to repair the underlying data-availability precondition (e.g. a different/longer-history pair or resolution), and would itself be logged as committed-search #2 per §5.
+
+**Data used:** 745 bars (ohlc), 2026-05-19T13:00:00Z .. 2026-06-19T13:00:00Z (the one gap-free segment — confirms the PRE block's ~720-bar ceiling note). Integrity (10A.2): 0 hard violations, 0 gaps. Split: train=447 / test=149 / holdout=149 bars.
+
+**Holdout:** 149 bars (the chronological-split tail, not a separately-carved holdout — this run predates the dedicated-holdout-before-folds design introduced in 10C-002).
+
+### Per-fold results
+
+Structural note: this run's walk-forward (480h train / 120h test / 120h step) was a diagnostic only, separate from the significance-bearing evaluation below (a single 60/20/20 chronological split) — 10C-002 later unified these into one pooled-across-folds design. Only 2 real folds fit in 745 bars; single-trade "best of 264" per fold is noise, not a finding.
+
+| Fold | OOS Expectancy (bps/trade) | Trades | Rule |
+|---|---|---|---|
+| 0 | 434.65 | 1 | (best-of-264, not individually recorded) |
+| 1 | 450.35 | 1 | (best-of-264, not individually recorded) |
+
+**Pooled top candidate:** SHORT, enter when `ema_ratio_20 > 0.98`, exit when `ema_ratio_20 < 0.98` (ranked on the single 60/20/20 split's test segment, not pooled across folds — see structural note above)
+**Pooled OOS expectancy:** 92.84bps/trade
+**Pooled OOS trades:** 2
+**Pooled OOS max drawdown:** 1.10%
+**Trials (committed N):** 264
+**DSR verdict:** Significant: No (DSR not meaningfully computable — 2 test trades is below the 10-trade `MIN_SAMPLE_LENGTH` floor, so `isSignificant` short-circuits to false before a DSR value is even computed)
+**Holdout status:** Untouched — per the pre-registered rule, the holdout is touched only if a candidate clears significance. None did.
+
+**Conclusion:** Null result at the committed budget. The binding constraint is data volume, not the search space or the friction model: 745 bars split 60/20/20 leaves only ~149 OOS bars, too few for any depth-1 rule (mean-reversion entries on a 1h RSI/EMA-ratio threshold) to produce enough trades to clear the 10-trade significance floor. This is the answer for this question at this budget, not a cue to re-roll with a different N, grid, or split — a second committed search on this question would need to repair the underlying data-availability precondition (e.g. a different/longer-history pair or resolution), and would itself be logged as committed-search #2 per §5.

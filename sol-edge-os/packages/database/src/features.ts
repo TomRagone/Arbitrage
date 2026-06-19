@@ -61,6 +61,17 @@ export class FeatureEngine {
     const causalCloses: number[] = [];
     for (let i = 0; i <= boundaryIndex; i++) causalCloses.push(historicalSeries[i].close);
 
+    // Breakout high/low share one formula across all 7 registered N values
+    // (10/14/20/30/50/75/100) — dispatched by prefix rather than 14 separate
+    // case labels. STRICTLY EXCLUDES the current bar (boundaryIndex itself):
+    // the window is [boundaryIndex-N, boundaryIndex-1], not [.., boundaryIndex].
+    if (featureName.startsWith("breakout_high_")) {
+      return computeBreakoutExtreme(historicalSeries, boundaryIndex, definition.lookbackPeriods, "high");
+    }
+    if (featureName.startsWith("breakout_low_")) {
+      return computeBreakoutExtreme(historicalSeries, boundaryIndex, definition.lookbackPeriods, "low");
+    }
+
     switch (featureName) {
       case "ema_20":
       case "ema":
@@ -74,6 +85,20 @@ export class FeatureEngine {
         throw new Error(`FeatureEngine: feature "${featureName}" is registered but has no computation implemented`);
     }
   }
+}
+
+/// max(high[boundaryIndex-N..boundaryIndex-1]) / min(low[...]) — a hard
+/// window of exactly N bars, STRICTLY EXCLUDING boundaryIndex (the current
+/// bar). NaN if fewer than N prior bars exist (warmup, not a causal
+/// violation — same convention as computeRsi's insufficient-history case).
+function computeBreakoutExtreme(series: readonly CompactCandle[], boundaryIndex: number, n: number, side: "high" | "low"): number {
+  if (boundaryIndex < n) return NaN;
+  let extreme = side === "high" ? -Infinity : Infinity;
+  for (let i = boundaryIndex - n; i <= boundaryIndex - 1; i++) {
+    const value = side === "high" ? series[i].high : series[i].low;
+    extreme = side === "high" ? Math.max(extreme, value) : Math.min(extreme, value);
+  }
+  return extreme;
 }
 
 /// IIR: recurses over the full causal series, no hard window — span only.

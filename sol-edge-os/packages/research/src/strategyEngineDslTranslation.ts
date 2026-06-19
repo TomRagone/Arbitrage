@@ -27,15 +27,20 @@
  *      BoolExpr (no portfolio state in EvalContext) and are not present
  *      here at all.
  *
- * Registry entries `ema_50`, `breakout_high_20`, `breakout_low_20`,
- * `atr_14`, `atr_sma_20` (packages/core/src/registry.ts) are registered
- * but have NO computation wired in `FeatureEngine`
- * (packages/database/src/features.ts) yet. Any attempt to actually
- * evaluate this strategy will throw loudly — both
- * `FeatureEngine.getFeatureSlice` (unimplemented-feature branch) and
- * `evaluateBoolExpr`/`resolveValue` (missing-key-in-context branch) fail
- * closed rather than silently returning a wrong number. Verified by
- * reading both call sites, not assumed.
+ * Registry entries `ema_50`, `atr_14`, `atr_sma_20`
+ * (packages/core/src/registry.ts) are registered but have NO computation
+ * wired in `FeatureEngine` (packages/database/src/features.ts). Any
+ * attempt to actually evaluate this strategy will still throw loudly on
+ * one of those — both `FeatureEngine.getFeatureSlice`
+ * (unimplemented-feature branch) and `evaluateBoolExpr`/`resolveValue`
+ * (missing-key-in-context branch) fail closed rather than silently
+ * returning a wrong number. UPDATE (Phase 10C-004): `breakout_high_20`
+ * and `breakout_low_20` are no longer in this category — they were
+ * implemented for real as part of the unrelated 10C-004 breakout-momentum
+ * search and now compute actual values. This does not make the strategy
+ * below evaluable end-to-end (ema_50/atr_14 still throw first) and does
+ * not change this file's EXPLORATORY/NON-EQUIVALENT status — deviations
+ * 1, 2, 3, 4, 5 above are unaffected.
  */
 import type { StrategyDSL } from "@sol-edge/core";
 

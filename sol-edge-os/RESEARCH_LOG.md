@@ -323,3 +323,61 @@ combinator) would need its own pre-registration and would be logged as
 committed-search #4 per §5. The 2,160-bar holdout remains untouched and
 available.
 
+### Phase 10C-004 — Real pre-registered search #4 (breakout/momentum continuation, new feature class)
+**Q:** Does price breaking above/below its own recent N-bar high/low show
+significant OOS momentum-continuation edge, for N ∈ {10,14,20,30,50,75,100}
+— a genuinely different hypothesis from 10C-001/002/003's mean-reversion
+conditions, not an extension or re-roll of any of them? Full
+pre-registration record: `docs/preregistration/10C-004-breakout-momentum.md`.
+**Method:** Implemented 14 new real features first — `breakout_high_N`/
+`breakout_low_N` (`max(high[t-N..t-1])`/`min(low[t-N..t-1])`, strictly
+excluding the current bar, `packages/database/src/features.ts`) —
+independently sanity-checked by execution (current-bar exclusion,
+exact-N-bar boundary, warmup NaN) before the run. `breakout_high_20`/
+`breakout_low_20` reuse two registry entries that previously existed as
+unimplemented stubs from the unrelated `strategyEngineDslTranslation.ts`
+work; that file's docs were corrected, its EXPLORATORY/NON-EQUIVALENT
+status otherwise unaffected. `apps/worker/scripts/search-10c-4.ts`: same
+process as 10C-002/003 (same series, same pre-carved holdout, same
+8-fold walk-forward, same pooled-OOS ranking), but depth-1 only — LONG
+`close > breakout_high_N`, SHORT `close < breakout_low_N`, mechanical
+negation exit, 7 N × 2 sides = 14 candidates, exhaustive. Given the small
+space, all 14 candidates' pooled stats are reported individually, not
+just the top.
+**Result:** **All 14 candidates show negative pooled OOS expectancy**
+(-52.11 to -66.76bps/trade), each on substantial trade counts (73-329
+trades — an order of magnitude more than 10C-003's sparse depth-2
+conjunctions) and large max drawdowns (33-86%). Every single fold's
+"best" candidate is also net negative — no fold, no lookback period, no
+side produced a positive result anywhere in this space. Top-ranked: SHORT
+`close < breakout_low_20`, -52.11bps/trade, 198 trades, 64.36% max
+drawdown. DSR is moot (negative mean can't show positive significance).
+Holdout **not evaluated** — nothing cleared significance, nothing was
+even directionally positive.
+**Post-hoc diagnostic (mechanism, not a new search):** holding-period
+check on the top 4 candidates, computed directly from `runAstKernel`'s
+raw entry/exit bar indices. Median holding period is **1 bar** for every
+one of them (means 1.45-1.49 bars), ~65% of all trades exit on the very
+next bar after entry, max holding period 3-8 bars across the board.
+Combined with the trade-count pattern (shorter/noisier lookbacks like
+N=10/14/20 produce far more trades than N=75/100 — whipsaw frequency
+scaling with level noise, not a deeper signal), this is unambiguous
+whipsaw churn, not absence of momentum.
+**Conclusion:** A clean, well-powered, uniformly negative result for
+*this specific construction* — but the claim it actually supports is
+narrower than "this market doesn't trend." This construction has no
+anti-chase filter and no confirmation gate — exactly the two safeguards
+the original hand-built `strategyEngine.ts` included for this same
+reason (volume confirmation, `isFirstOccurrence`). The holding-period
+diagnostic confirms why: price crosses the level, enters, falls back
+across the same barely-moved level one bar later, exits — then often
+re-enters the same fakeout. That's "unfiltered momentum entries churn on
+noise at this resolution," a structurally narrower failure mode than a
+verdict on momentum as a category. Not a cue to re-roll lookback periods
+— the uniformity across all 7 N values reflects the same churn mechanism
+at every scale, not 7 independent failures. The well-motivated next step
+is a confirmation-filtered construction (depth-2: breakout AND a
+trend/momentum-confirming condition on `rsi_14` or `ema_ratio_20`),
+which would directly test whether filtering removes the churn — logged
+as committed-search #5 per §5 if run. The 2,160-bar holdout remains
+untouched and available.

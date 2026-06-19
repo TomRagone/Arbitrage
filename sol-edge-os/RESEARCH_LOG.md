@@ -422,3 +422,50 @@ committed search would need a structurally different exit/holding model,
 not another feature pairing, and would be logged as committed-search #6
 per §5 if pursued. The 2,160-bar holdout remains untouched and available
 across all five searches to date.
+
+### Phase 10C-006 — Real pre-registered search #6 (Donchian channel: decoupled entry/exit, the mechanism fix) — CONSOLIDATION POINT
+**Q:** 10C-005 diagnosed the whipsaw's cause as mechanical: negation
+exits the instant the SAME noisy level that triggered entry gets
+recrossed. Does decoupling entry/exit to independent reference levels (a
+classic Donchian channel — enter the N-bar high, exit the N-bar low, not
+a negation) actually fix it and surface a significant edge? Full
+pre-registration record: `docs/preregistration/10C-006-donchian-channel.md`.
+**Method:** `apps/worker/scripts/search-10c-6.ts`. LONG: enter
+`close>breakout_high_N`, exit `close<breakout_low_N` (mirror for SHORT)
+— entry and exit reference different features, no negation anywhere. 7
+N × 2 sides = 14 candidates, exhaustive, sanity-checked before the run.
+No new features (reuses 10C-004's 14 `breakout_high_N`/`breakout_low_N`
+features), no kernel change (`StrategyDSL` never required entry/exit to
+share a reference level). Same process otherwise. The holding-period
+diagnostic, now standing from 10C-004/005, was run on every candidate
+clearing the ≥10-trade floor regardless of outcome.
+**Result:** The mechanism fix worked exactly as predicted — median
+holding periods now 13-143 bars across all 14 candidates (vs. 1 bar in
+10C-004/005), 0.0-1.5% held exactly 1 bar (vs. 65-83% before). Complete
+elimination of the whipsaw signature. But still **null**: top-ranked SHORT
+`breakout_low_50`/`breakout_high_50`, +37.94bps/trade, 23 trades, 37.72%
+max drawdown — positive and well-sampled, but DSR falls below 0.95. 13
+of 14 candidates are net negative, several heavily (down to -367bps).
+Mixed, not uniform like 10C-004 — but still no significant edge anywhere
+in the space. Holdout **not evaluated**.
+**Conclusion:** This is the cleanest, most complete test in the entire
+thread — real trade counts, real holding periods, the specific mechanical
+flaw identified and fixed — and it still nulls. 10C-005's diagnosis was
+correct (whipsaw was mechanical, not a signal-confirmation problem), but
+fixing it did not reveal a hidden edge underneath. **This is the
+consolidation point**, per the decision rule locked into 10C-006's PRE
+block before this ran: five structurally distinct hypothesis classes have
+now come back empty — pure mean-reversion (10C-001/002), conjunctive
+mean-reversion (10C-003), naive momentum (10C-004), confirmed momentum
+(10C-005), and channel-exit momentum (10C-006). Across six committed
+searches and 10,604 total candidate evaluations (264 + 264 + 8,200 + 14
++ 1,848 + 14), no construction in this feature universe
+(`rsi_14`, `ema_ratio_20`, 7-lookback breakout/Donchian features) on
+Kraken SOL/USDT 1h shows a real, adequately-sampled, statistically
+significant edge after real calibrated friction. This is a legitimate,
+complete research finding — not a search-effort failure — and the
+honest next move is to stop generating new feature combinations in this
+universe and consolidate, not pursue a #7. The 2,160-bar holdout remains
+untouched and available across all six searches, should a genuinely new
+hypothesis (different resolution, different pair, or a non-AST-kernel
+structural change) warrant a fresh committed search later.

@@ -32,7 +32,10 @@ import {
   type RankedStrategy,
 } from "@sol-edge/research";
 import marketConfig from "../../../config/market.json";
+import path from "path";
+import { writeSearchResultJson } from "./lib/searchResultJson";
 
+const PREREG_DIR = path.join(process.cwd(), "..", "..", "docs", "preregistration");
 const FEATURE_KEYS = ["rsi_14", "ema_ratio_20"];
 const HOLDOUT_BARS = 2160; // 90 days, carved out FIRST, before any fold
 const TRAIN_BARS = 2160; // 90 days
@@ -110,6 +113,7 @@ async function main() {
   // non-overlapping and time-ordered) into that candidate's cross-fold OOS
   // return series — the significance-bearing evaluation for this design. ──
   const pooledReturns: number[][] = candidates.map(() => []);
+  const perFoldRecords: { fold: number; expectancyBps: number; trades: number; rule: string }[] = [];
 
   console.log(`── Per-fold OOS results ──`);
   plan.folds.forEach((fold, foldIndex) => {
@@ -131,6 +135,7 @@ async function main() {
       }
     });
 
+    perFoldRecords.push({ fold: foldIndex, expectancyBps: toBps(bestExpectancy), trades: bestTrades, rule: describeStrategy(candidates[bestIdx]) });
     console.log(`  Fold ${foldIndex}: best OOS expectancy ${toBps(bestExpectancy).toFixed(2)}bps/trade (${bestTrades} trades) — ${describeStrategy(candidates[bestIdx])}`);
   });
 
@@ -164,17 +169,43 @@ async function main() {
   console.log(`  Trials (committed N): ${top.trials}`);
   console.log(`  Significant (DSR >= 0.95, min 10 pooled OOS trades): ${significant}`);
 
+  let holdoutJson: { evaluated: boolean; expectancyBps?: number; trades?: number; maxDrawdownPct?: number } = { evaluated: false };
   if (significant) {
     console.log(`\n── HOLDOUT (touched once, final honest estimate) ──`);
     const holdoutSplit = { train: walkForwardPool, test: [], holdout: holdoutCandles };
     const holdoutResult = evaluateHoldoutOnce(top.strategy, holdoutSplit, DEFAULT_SIM_CONFIG, DEFAULT_FRICTION_PARAMS);
     console.log(`  Holdout expectancy: ${toBps(holdoutResult.simulatedExpectancy).toFixed(2)}bps/trade (${holdoutResult.totalTrades} trades) — DO NOT RE-RUN.`);
     console.log(`  Holdout max drawdown: ${(holdoutResult.maxDrawdownSimulated * 100).toFixed(2)}%`);
+    holdoutJson = {
+      evaluated: true,
+      expectancyBps: toBps(holdoutResult.simulatedExpectancy),
+      trades: holdoutResult.totalTrades,
+      maxDrawdownPct: holdoutResult.maxDrawdownSimulated * 100,
+    };
   } else {
     console.log(
       `\nNo candidate cleared significance at the committed budget (8200 trials, DSR >= 0.95, min 10 pooled OOS trades). This is a valid, complete null result — the holdout is NOT touched.`,
     );
   }
+
+  writeSearchResultJson(
+    "10C-003-depth2-conjunctions",
+    {
+      runId: "10C-003",
+      trials: top.trials,
+      significant,
+      perFold: perFoldRecords,
+      topCandidate: {
+        label: describeStrategy(top.strategy),
+        pooledExpectancyBps: toBps(top.testStats.simulatedExpectancy),
+        pooledTrades: top.testStats.totalTrades,
+        maxDrawdownPct: top.testStats.maxDrawdownSimulated * 100,
+      },
+      topCandidateReturns: top.testReturns,
+      holdout: holdoutJson,
+    },
+    PREREG_DIR,
+  );
 }
 
 main();

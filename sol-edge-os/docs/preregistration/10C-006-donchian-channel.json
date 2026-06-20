@@ -1,0 +1,115 @@
+{
+  "runId": "10C-006",
+  "trials": 14,
+  "significant": false,
+  "perFold": [
+    {
+      "fold": 0,
+      "expectancyBps": 637.609261504212,
+      "trades": 1,
+      "rule": "LONG: enter close>breakout_high_100, exit close<breakout_low_100"
+    },
+    {
+      "fold": 1,
+      "expectancyBps": 36.66897261287184,
+      "trades": 8,
+      "rule": "LONG: enter close>breakout_high_20, exit close<breakout_low_20"
+    },
+    {
+      "fold": 2,
+      "expectancyBps": 154.8639553697325,
+      "trades": 2,
+      "rule": "LONG: enter close>breakout_high_100, exit close<breakout_low_100"
+    },
+    {
+      "fold": 3,
+      "expectancyBps": 496.3562533309007,
+      "trades": 2,
+      "rule": "SHORT: enter close<breakout_low_100, exit close>breakout_high_100"
+    },
+    {
+      "fold": 4,
+      "expectancyBps": 574.1187126927709,
+      "trades": 3,
+      "rule": "SHORT: enter close<breakout_low_50, exit close>breakout_high_50"
+    },
+    {
+      "fold": 5,
+      "expectancyBps": -80.95441255370595,
+      "trades": 5,
+      "rule": "SHORT: enter close<breakout_low_30, exit close>breakout_high_30"
+    },
+    {
+      "fold": 6,
+      "expectancyBps": 1191.979089851855,
+      "trades": 1,
+      "rule": "LONG: enter close>breakout_high_50, exit close<breakout_low_50"
+    },
+    {
+      "fold": 7,
+      "expectancyBps": 1844.715617956247,
+      "trades": 2,
+      "rule": "SHORT: enter close<breakout_low_50, exit close>breakout_high_50"
+    }
+  ],
+  "topCandidate": {
+    "label": "SHORT: enter close<breakout_low_50, exit close>breakout_high_50",
+    "pooledExpectancyBps": 37.93912724818392,
+    "pooledTrades": 23,
+    "maxDrawdownPct": 37.72335496239513
+  },
+  "topCandidateReturns": [
+    -0.03861022018282345,
+    -0.07067545623976576,
+    -0.040033265871940685,
+    -0.06445249028552683,
+    -0.07535744070137361,
+    0.07941883923658469,
+    -0.07008352724221158,
+    -0.02591814832393331,
+    -0.040201275570810324,
+    -0.02878417406951401,
+    -0.034814800313819935,
+    -0.060613805579704486,
+    0.001976597066299688,
+    0.11663771362597425,
+    -0.02675480574243149,
+    -0.09531744929554739,
+    0.16895133134849938,
+    0.0986017317548793,
+    -0.05360561393513785,
+    -0.0036882599110354877,
+    -0.01835861068708751,
+    -0.016052167801758797,
+    0.38499529139300814
+  ],
+  "topCandidateHoldingPeriods": [
+    42,
+    35,
+    46,
+    36,
+    72,
+    143,
+    23,
+    65,
+    55,
+    94,
+    70,
+    62,
+    113,
+    131,
+    63,
+    89,
+    235,
+    201,
+    82,
+    57,
+    72,
+    166,
+    372
+  ],
+  "holdout": {
+    "evaluated": false
+  },
+  "generatedAt": "2026-06-19T23:44:29.781Z"
+}

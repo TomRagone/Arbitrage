@@ -1,0 +1,68 @@
+{
+  "runId": "10C-003",
+  "trials": 8200,
+  "significant": false,
+  "perFold": [
+    {
+      "fold": 0,
+      "expectancyBps": 281.99024683329014,
+      "trades": 8,
+      "rule": "LONG: enter when (rsi_14 > 20 AND ema_ratio_20 > 0.98), exit when (rsi_14 < 20 OR ema_ratio_20 < 0.98)"
+    },
+    {
+      "fold": 1,
+      "expectancyBps": 175.51485085448866,
+      "trades": 1,
+      "rule": "SHORT: enter when (rsi_14 < 60 AND ema_ratio_20 > 1.018), exit when (rsi_14 > 60 OR ema_ratio_20 < 1.018)"
+    },
+    {
+      "fold": 2,
+      "expectancyBps": 243.37341153455532,
+      "trades": 1,
+      "rule": "LONG: enter when (rsi_14 > 52.5 AND ema_ratio_20 < 0.985), exit when (rsi_14 < 52.5 OR ema_ratio_20 > 0.985)"
+    },
+    {
+      "fold": 3,
+      "expectancyBps": 158.58747872212726,
+      "trades": 1,
+      "rule": "SHORT: enter when (rsi_14 > 52.5 AND ema_ratio_20 < 0.985), exit when (rsi_14 < 52.5 OR ema_ratio_20 > 0.985)"
+    },
+    {
+      "fold": 4,
+      "expectancyBps": 501.80911156327295,
+      "trades": 1,
+      "rule": "SHORT: enter when (rsi_14 < 20 AND ema_ratio_20 > 0.986), exit when (rsi_14 > 20 OR ema_ratio_20 < 0.986)"
+    },
+    {
+      "fold": 5,
+      "expectancyBps": 179.0615406579033,
+      "trades": 1,
+      "rule": "LONG: enter when (rsi_14 < 55 AND ema_ratio_20 > 1.02), exit when (rsi_14 > 55 OR ema_ratio_20 < 1.02)"
+    },
+    {
+      "fold": 6,
+      "expectancyBps": 184.5701144512961,
+      "trades": 2,
+      "rule": "SHORT: enter when (rsi_14 > 20 AND ema_ratio_20 < 0.98), exit when (rsi_14 < 20 OR ema_ratio_20 > 0.98)"
+    },
+    {
+      "fold": 7,
+      "expectancyBps": 193.94856854154028,
+      "trades": 16,
+      "rule": "SHORT: enter when (rsi_14 < 80 AND ema_ratio_20 < 1.0150000000000001), exit when (rsi_14 > 80 OR ema_ratio_20 > 1.0150000000000001)"
+    }
+  ],
+  "topCandidate": {
+    "label": "SHORT: enter when (rsi_14 > 75 AND ema_ratio_20 < 0.993), exit when (rsi_14 < 75 OR ema_ratio_20 > 0.993)",
+    "pooledExpectancyBps": 117.47212587072806,
+    "pooledTrades": 1,
+    "maxDrawdownPct": 0
+  },
+  "topCandidateReturns": [
+    0.011747212587072807
+  ],
+  "holdout": {
+    "evaluated": false
+  },
+  "generatedAt": "2026-06-19T23:38:37.721Z"
+}

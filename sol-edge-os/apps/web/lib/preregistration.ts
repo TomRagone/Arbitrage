@@ -1,9 +1,9 @@
 import fs from "fs";
 import path from "path";
 
-const PREREG_DIR = path.join(process.cwd(), "..", "..", "sol-edge-os", "docs", "preregistration");
-const MARKET_CONFIG_PATH = path.join(process.cwd(), "..", "..", "sol-edge-os", "config", "market.json");
-const FRICTION_CONFIG_PATH = path.join(process.cwd(), "..", "..", "sol-edge-os", "config", "frictionCalibration.json");
+const PREREG_DIR = path.join(process.cwd(), "..", "..", "docs", "preregistration");
+const MARKET_CONFIG_PATH = path.join(process.cwd(), "..", "..", "config", "market.json");
+const FRICTION_CONFIG_PATH = path.join(process.cwd(), "..", "..", "config", "frictionCalibration.json");
 
 export interface FoldResult {
   fold: string;

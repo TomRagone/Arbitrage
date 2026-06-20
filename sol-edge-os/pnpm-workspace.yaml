@@ -9,3 +9,5 @@ allowBuilds:
   ccxt: true
   esbuild: false
   prisma: false
+  sharp: true
+  unrs-resolver: true

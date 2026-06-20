@@ -10,3 +10,4 @@ __*.ts
 *.sqlite
 *.sqlite-journal
 packages/database/data/
+**/.DS_Store

@@ -1,9 +1,19 @@
 import Link from "next/link";
-import { listPreRegistrationRecords } from "@/lib/preregistration";
+import { computeVerdict, listPreRegistrationRecords } from "@/lib/preregistration";
 
 function StatusBadge({ status }: { status: "significant" | "null" | "in-progress" }) {
   const label = status === "in-progress" ? "in progress" : status;
   return <span className={`badge badge-${status}`}>{label}</span>;
+}
+
+function VerdictBadge({ status }: { status: "GO" | "NO-GO" | "PENDING" | "ANOMALY" }) {
+  const cls = status === "GO" ? "badge-significant" : status === "PENDING" ? "badge-in-progress" : "badge-null";
+  const icon = status === "GO" ? "✅" : status === "PENDING" ? "…" : status === "ANOMALY" ? "⚠️" : "❌";
+  return (
+    <span className={`badge ${cls}`}>
+      {icon} {status}
+    </span>
+  );
 }
 
 export default function OverviewPage() {
@@ -26,6 +36,7 @@ export default function OverviewPage() {
             <th>Date range</th>
             <th>Search space</th>
             <th>Status</th>
+            <th>Verdict</th>
           </tr>
         </thead>
         <tbody>
@@ -43,6 +54,9 @@ export default function OverviewPage() {
               <td className="mono">{r.searchSpaceSize ? `${r.searchSpaceSize} candidates` : "—"}</td>
               <td>
                 <StatusBadge status={r.status} />
+              </td>
+              <td>
+                <VerdictBadge status={computeVerdict(r).status} />
               </td>
             </tr>
           ))}

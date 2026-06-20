@@ -12,6 +12,34 @@ export interface FoldResult {
   rule: string;
 }
 
+/// Structured per-search data written by each search script
+/// (apps/worker/scripts/lib/searchResultJson.ts) alongside its markdown
+/// record — same numbers as the markdown, just structured for charting.
+/// Optional: older or hand-backfilled records (10C-001) may have a null
+/// topCandidateReturns, or no JSON file at all.
+export interface SearchResultData {
+  readonly runId: string;
+  readonly trials: number;
+  readonly significant: boolean;
+  readonly perFold: readonly { fold: number; expectancyBps: number; trades: number; rule: string }[];
+  readonly topCandidate: {
+    readonly label: string;
+    readonly pooledExpectancyBps: number;
+    readonly pooledTrades: number;
+    readonly maxDrawdownPct: number;
+  };
+  readonly topCandidateReturns: readonly number[] | null;
+  readonly topCandidateHoldingPeriods?: readonly number[] | null;
+  readonly holdout: {
+    readonly evaluated: boolean;
+    readonly expectancyBps?: number;
+    readonly trades?: number;
+    readonly maxDrawdownPct?: number;
+  };
+  readonly generatedAt: string;
+  readonly note?: string;
+}
+
 export interface PreRegistrationRecord {
   fileSlug: string; // filename without .md, used for routing
   runId: string; // e.g. "10C-002"
@@ -38,6 +66,17 @@ export interface PreRegistrationRecord {
   conclusion: string;
 
   rawMarkdown: string;
+  resultData: SearchResultData | null;
+}
+
+function loadSearchResultData(fileSlug: string): SearchResultData | null {
+  const jsonPath = path.join(PREREG_DIR, `${fileSlug}.json`);
+  if (!fs.existsSync(jsonPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+  } catch {
+    return null;
+  }
 }
 
 /// Extracts the value following a `- Label:` bullet line, up to the next
@@ -179,7 +218,72 @@ function parsePreRegistrationRecord(fileSlug: string, md: string): PreRegistrati
     holdoutStatus: hasResultContent ? extractLabeledField(resultBlock, "Holdout status") : "",
     conclusion: hasResultContent ? extractLabeledField(resultBlock, "Conclusion") : "",
     rawMarkdown: md,
+    resultData: loadSearchResultData(fileSlug),
   };
+}
+
+export interface Verdict {
+  readonly status: "GO" | "NO-GO" | "PENDING" | "ANOMALY";
+  readonly reasons: readonly string[];
+}
+
+const WHIPSAW_MEDIAN_HOLD_THRESHOLD_BARS = 2; // <= this many bars is treated as a whipsaw signature, not a real hold
+
+function median(values: readonly number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+/// Deterministic, rule-based verdict — computed entirely from the same
+/// structured fields (trials, trade count, DSR/significant, holdout
+/// status, holding periods) used by hand throughout this research
+/// thread. No free-form commentary, nothing that could oversell a
+/// result — every reason traces to a specific number in resultData.
+export function computeVerdict(record: PreRegistrationRecord): Verdict {
+  if (!record.hasResult) {
+    return { status: "PENDING", reasons: ["No RESULT recorded yet — this search has not been run, or is still in progress."] };
+  }
+
+  const data = record.resultData;
+  if (!data) {
+    // Fallback for a record with a markdown RESULT but no JSON artifact (e.g. predates this convention).
+    const significant = /significant:\s*yes/i.test(record.dsrVerdict);
+    const holdoutEvaluated = /evaluated once/i.test(record.holdoutStatus);
+    if (significant && holdoutEvaluated) return { status: "GO", reasons: [`Holdout evaluated once: ${record.holdoutStatus}`] };
+    if (significant && !holdoutEvaluated) return { status: "ANOMALY", reasons: ["DSR verdict says significant, but holdout was never evaluated — investigate."] };
+    return { status: "NO-GO", reasons: [record.dsrVerdict || "Did not clear significance (no structured data available — see markdown record)."] };
+  }
+
+  if (data.holdout.evaluated) {
+    if (!data.significant) {
+      return { status: "ANOMALY", reasons: ["Holdout was evaluated, but the top candidate is not marked significant — this violates the pre-registered rule (holdout only touched after clearing significance). Investigate."] };
+    }
+    return {
+      status: "GO",
+      reasons: [
+        `Cleared significance (DSR >= 0.95, ${data.topCandidate.pooledTrades} pooled OOS trades) and the locked holdout was evaluated exactly once: ${data.holdout.expectancyBps?.toFixed(2)}bps/trade, ${data.holdout.trades} trades, ${data.holdout.maxDrawdownPct?.toFixed(2)}% max drawdown. DO NOT RE-RUN.`,
+      ],
+    };
+  }
+
+  const reasons: string[] = [];
+  if (data.topCandidate.pooledTrades < 10) {
+    reasons.push(`Insufficient trades — top candidate has only ${data.topCandidate.pooledTrades} pooled OOS trade(s), below the 10-trade significance floor. No significance claim is possible regardless of the expectancy shown.`);
+  } else if (data.topCandidate.pooledExpectancyBps <= 0) {
+    reasons.push(`Negative or zero expectancy (${data.topCandidate.pooledExpectancyBps.toFixed(2)}bps/trade on ${data.topCandidate.pooledTrades} trades) — no edge to test for significance.`);
+  } else {
+    reasons.push(`Positive expectancy (${data.topCandidate.pooledExpectancyBps.toFixed(2)}bps/trade, ${data.topCandidate.pooledTrades} trades) but DSR fell below the 0.95 threshold — does not survive deflation for ${data.trials} trials.`);
+  }
+
+  if (data.topCandidateHoldingPeriods && data.topCandidateHoldingPeriods.length > 0) {
+    const med = median(data.topCandidateHoldingPeriods);
+    if (med <= WHIPSAW_MEDIAN_HOLD_THRESHOLD_BARS) {
+      const oneBarFraction = data.topCandidateHoldingPeriods.filter((h) => h === 1).length / data.topCandidateHoldingPeriods.length;
+      reasons.push(`Whipsaw signature: median holding period is ${med} bar(s) (${(oneBarFraction * 100).toFixed(0)}% of trades exit within 1 bar of entry) — consistent with mechanical churn rather than a captured move.`);
+    }
+  }
+
+  return { status: "NO-GO", reasons };
 }
 
 export interface MarketConfig {

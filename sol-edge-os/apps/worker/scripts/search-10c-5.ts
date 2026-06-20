@@ -35,7 +35,10 @@ import {
 } from "@sol-edge/research";
 import { runAstKernel } from "@sol-edge/kernel";
 import marketConfig from "../../../config/market.json";
+import path from "path";
+import { writeSearchResultJson } from "./lib/searchResultJson";
 
+const PREREG_DIR = path.join(process.cwd(), "..", "..", "docs", "preregistration");
 const HOLDOUT_BARS = 2160;
 const TRAIN_BARS = 2160;
 const TEST_BARS = 720;
@@ -175,6 +178,7 @@ async function main() {
 
   const strategies = candidates.map((c) => c.strategy);
   const pooledReturns: number[][] = strategies.map(() => []);
+  const perFoldRecords: { fold: number; expectancyBps: number; trades: number; rule: string }[] = [];
 
   console.log(`── Per-fold OOS results ──`);
   plan.folds.forEach((fold, foldIndex) => {
@@ -196,6 +200,7 @@ async function main() {
       }
     });
 
+    perFoldRecords.push({ fold: foldIndex, expectancyBps: toBps(bestExpectancy), trades: bestTrades, rule: candidates[bestIdx].label });
     console.log(`  Fold ${foldIndex}: best OOS expectancy ${toBps(bestExpectancy).toFixed(2)}bps/trade (${bestTrades} trades) — ${candidates[bestIdx].label}`);
   });
 
@@ -248,7 +253,8 @@ async function main() {
 
   // ── Holding-period diagnostic on the top 3, regardless of significance (pre-registered) ──
   console.log(`\n── Holding-period diagnostic (top 3, vs. 10C-004's ~1.5-bar median) ──`);
-  for (const r of ranked.slice(0, 3)) {
+  let topHoldingPeriods: number[] = [];
+  ranked.slice(0, 3).forEach((r, idx) => {
     const holdingPeriods: number[] = [];
     plan.folds.forEach((fold) => {
       const fullSeries = [...fold.train, ...fold.test];
@@ -256,26 +262,55 @@ async function main() {
       const trades = runAstKernel(r.strategy, fold.test, testFeatures);
       for (const trade of trades) holdingPeriods.push(trade.exitTime - trade.entryTime);
     });
+    if (idx === 0) topHoldingPeriods = holdingPeriods;
     if (holdingPeriods.length === 0) {
       console.log(`  ${r.label}: 0 trades, no holding-period data.`);
-      continue;
+      return;
     }
     const meanHold = mean(holdingPeriods);
     const sorted = [...holdingPeriods].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
     const oneBarFraction = holdingPeriods.filter((h) => h === 1).length / holdingPeriods.length;
     console.log(`  ${r.label}: mean=${meanHold.toFixed(2)} median=${median} max=${sorted[sorted.length - 1]} (${(oneBarFraction * 100).toFixed(1)}% held exactly 1 bar)`);
-  }
+  });
 
+  let holdoutJson: { evaluated: boolean; expectancyBps?: number; trades?: number; maxDrawdownPct?: number } = { evaluated: false };
   if (significant) {
     console.log(`\n── HOLDOUT (touched once, final honest estimate) ──`);
     const holdoutSplit = { train: walkForwardPool, test: [], holdout: holdoutCandles };
     const holdoutResult = evaluateHoldoutOnce(top.strategy, holdoutSplit, DEFAULT_SIM_CONFIG, DEFAULT_FRICTION_PARAMS);
     console.log(`  Holdout expectancy: ${toBps(holdoutResult.simulatedExpectancy).toFixed(2)}bps/trade (${holdoutResult.totalTrades} trades) — DO NOT RE-RUN.`);
     console.log(`  Holdout max drawdown: ${(holdoutResult.maxDrawdownSimulated * 100).toFixed(2)}%`);
+    holdoutJson = {
+      evaluated: true,
+      expectancyBps: toBps(holdoutResult.simulatedExpectancy),
+      trades: holdoutResult.totalTrades,
+      maxDrawdownPct: holdoutResult.maxDrawdownSimulated * 100,
+    };
   } else {
     console.log(`\nNo candidate cleared significance at the committed budget (1848 trials, DSR >= 0.95, min 10 pooled OOS trades). This is a valid, complete null result — the holdout is NOT touched.`);
   }
+
+  writeSearchResultJson(
+    "10C-005-breakout-confirmed",
+    {
+      runId: "10C-005",
+      trials: top.trials,
+      significant,
+      perFold: perFoldRecords,
+      topCandidate: {
+        label: top.label,
+        pooledExpectancyBps: toBps(top.testStats.simulatedExpectancy),
+        pooledTrades: top.testStats.totalTrades,
+        maxDrawdownPct: top.testStats.maxDrawdownSimulated * 100,
+      },
+      topCandidateReturns: top.testReturns,
+      topCandidateHoldingPeriods: topHoldingPeriods,
+      holdout: holdoutJson,
+      note: "Top-ranked-by-raw-expectancy candidate has very few pooled trades (sparsity artifact of this depth-2 AND space) — see the markdown record's 'honesty check' section for the best candidate among those with >=10 trades, which is more informative than this raw top.",
+    },
+    PREREG_DIR,
+  );
 }
 
 main();

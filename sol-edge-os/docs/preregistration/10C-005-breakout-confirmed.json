@@ -1,0 +1,72 @@
+{
+  "runId": "10C-005",
+  "trials": 1848,
+  "significant": false,
+  "perFold": [
+    {
+      "fold": 0,
+      "expectancyBps": 82.40216192000364,
+      "trades": 1,
+      "rule": "LONG: (close>breakout_high_30 AND rsi_14<57.5)"
+    },
+    {
+      "fold": 1,
+      "expectancyBps": 23.52588198370472,
+      "trades": 1,
+      "rule": "LONG: (close>breakout_high_75 AND ema_ratio_20<1.018)"
+    },
+    {
+      "fold": 2,
+      "expectancyBps": 142.79560085549215,
+      "trades": 2,
+      "rule": "SHORT: (close<breakout_low_50 AND rsi_14<20)"
+    },
+    {
+      "fold": 3,
+      "expectancyBps": 104.80001209324291,
+      "trades": 3,
+      "rule": "SHORT: (close<breakout_low_10 AND rsi_14>55)"
+    },
+    {
+      "fold": 4,
+      "expectancyBps": 64.9682360530023,
+      "trades": 1,
+      "rule": "LONG: (close>breakout_high_14 AND ema_ratio_20<1.002)"
+    },
+    {
+      "fold": 5,
+      "expectancyBps": 208.01853251427409,
+      "trades": 1,
+      "rule": "LONG: (close>breakout_high_75 AND rsi_14<60)"
+    },
+    {
+      "fold": 6,
+      "expectancyBps": 119.27723977353732,
+      "trades": 3,
+      "rule": "SHORT: (close<breakout_low_10 AND ema_ratio_20<0.98)"
+    },
+    {
+      "fold": 7,
+      "expectancyBps": 74.3778421482109,
+      "trades": 1,
+      "rule": "SHORT: (close<breakout_low_75 AND rsi_14>35)"
+    }
+  ],
+  "topCandidate": {
+    "label": "LONG: (close>breakout_high_30 AND ema_ratio_20<1.006)",
+    "pooledExpectancyBps": 85.01270990452262,
+    "pooledTrades": 1,
+    "maxDrawdownPct": 0
+  },
+  "topCandidateReturns": [
+    0.008501270990452262
+  ],
+  "topCandidateHoldingPeriods": [
+    2
+  ],
+  "holdout": {
+    "evaluated": false
+  },
+  "note": "Top-ranked-by-raw-expectancy candidate has very few pooled trades (sparsity artifact of this depth-2 AND space) — see the markdown record's 'honesty check' section for the best candidate among those with >=10 trades, which is more informative than this raw top.",
+  "generatedAt": "2026-06-19T23:44:13.915Z"
+}

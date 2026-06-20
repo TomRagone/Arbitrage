@@ -1,17 +1,45 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPreRegistrationRecord } from "@/lib/preregistration";
+import { computeVerdict, getPreRegistrationRecord } from "@/lib/preregistration";
+import { EquityCurveChart } from "@/app/components/EquityCurveChart";
+import { FoldStabilityChart } from "@/app/components/FoldStabilityChart";
+
+function VerdictBlock({ verdict }: { verdict: { status: "GO" | "NO-GO" | "PENDING" | "ANOMALY"; reasons: readonly string[] } }) {
+  const badgeClass = verdict.status === "GO" ? "badge-significant" : verdict.status === "PENDING" ? "badge-in-progress" : "badge-null";
+  const icon = verdict.status === "GO" ? "✅" : verdict.status === "PENDING" ? "…" : verdict.status === "ANOMALY" ? "⚠️" : "❌";
+  return (
+    <div className="card" style={{ borderLeft: `3px solid ${verdict.status === "GO" ? "var(--good)" : verdict.status === "ANOMALY" ? "var(--neutral)" : verdict.status === "PENDING" ? "var(--accent)" : "var(--bad)"}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: verdict.reasons.length ? 10 : 0 }}>
+        <span style={{ fontSize: 18 }}>{icon}</span>
+        <span className={`badge ${badgeClass}`} style={{ fontSize: 13 }}>
+          {verdict.status}
+        </span>
+      </div>
+      <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13.5 }}>
+        {verdict.reasons.map((r, i) => (
+          <li key={i} style={{ marginBottom: 4 }}>
+            {r}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export default async function SearchDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const record = getPreRegistrationRecord(slug);
   if (!record) notFound();
+  const verdict = computeVerdict(record);
 
   return (
     <>
       <Link href="/">&larr; all searches</Link>
       <h1 className="mono">{record.runId}</h1>
       <p className="subtitle">{record.question}</p>
+
+      <h2>Verdict</h2>
+      <VerdictBlock verdict={verdict} />
 
       <h2>PRE (committed before the run)</h2>
       <dl className="card">
@@ -50,6 +78,9 @@ export default async function SearchDetailPage({ params }: { params: Promise<{ s
           </dl>
 
           <h3>Per-fold results</h3>
+          {record.resultData && record.resultData.perFold.length > 0 && (
+            <FoldStabilityChart folds={record.resultData.perFold} />
+          )}
           {record.foldResults.length > 0 ? (
             <>
               <table>
@@ -79,6 +110,11 @@ export default async function SearchDetailPage({ params }: { params: Promise<{ s
           )}
 
           <h3>Pooled / significance-bearing result</h3>
+          {record.resultData && (
+            <div className="card">
+              <EquityCurveChart returns={record.resultData.topCandidateReturns ?? []} />
+            </div>
+          )}
           <dl className="card">
             <div className="field">
               <dt>Top candidate</dt>

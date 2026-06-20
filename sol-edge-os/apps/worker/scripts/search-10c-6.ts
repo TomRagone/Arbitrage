@@ -36,7 +36,10 @@ import {
 } from "@sol-edge/research";
 import { runAstKernel } from "@sol-edge/kernel";
 import marketConfig from "../../../config/market.json";
+import path from "path";
+import { writeSearchResultJson } from "./lib/searchResultJson";
 
+const PREREG_DIR = path.join(process.cwd(), "..", "..", "docs", "preregistration");
 const HOLDOUT_BARS = 2160;
 const TRAIN_BARS = 2160;
 const TEST_BARS = 720;
@@ -124,6 +127,7 @@ async function main() {
     new Set(LOOKBACKS.flatMap((n) => [`breakout_high_${n}`, `breakout_low_${n}`])),
   );
   const pooledReturns: number[][] = candidates.map(() => []);
+  const perFoldRecords: { fold: number; expectancyBps: number; trades: number; rule: string }[] = [];
 
   console.log(`── Per-fold OOS results ──`);
   plan.folds.forEach((fold, foldIndex) => {
@@ -145,6 +149,7 @@ async function main() {
       }
     });
 
+    perFoldRecords.push({ fold: foldIndex, expectancyBps: toBps(bestExpectancy), trades: bestTrades, rule: built[bestIdx].label });
     console.log(`  Fold ${foldIndex}: best OOS expectancy ${toBps(bestExpectancy).toFixed(2)}bps/trade (${bestTrades} trades) — ${built[bestIdx].label}`);
   });
 
@@ -181,7 +186,8 @@ async function main() {
   // ── Standing diagnostic: holding period on whatever clears the >=10-trade floor ──
   const sufficientlyTraded = ranked.filter((r) => r.testStats.totalTrades >= 10);
   console.log(`\n── Holding-period diagnostic (candidates with >=10 pooled trades: ${sufficientlyTraded.length} of ${ranked.length}) ──`);
-  for (const r of sufficientlyTraded) {
+  let topHoldingPeriods: number[] = [];
+  sufficientlyTraded.forEach((r) => {
     const holdingPeriods: number[] = [];
     plan.folds.forEach((fold) => {
       const fullSeries = [...fold.train, ...fold.test];
@@ -189,6 +195,7 @@ async function main() {
       const trades = runAstKernel(r.strategy, fold.test, testFeatures);
       for (const trade of trades) holdingPeriods.push(trade.exitTime - trade.entryTime);
     });
+    if (r === top) topHoldingPeriods = holdingPeriods;
     const meanHold = mean(holdingPeriods);
     const sorted = [...holdingPeriods].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
@@ -196,20 +203,47 @@ async function main() {
     console.log(
       `  ${r.label}: ${holdingPeriods.length} trades, mean=${meanHold.toFixed(2)} median=${median} max=${sorted[sorted.length - 1]} (${(oneBarFraction * 100).toFixed(1)}% held exactly 1 bar)`,
     );
-  }
+  });
   if (sufficientlyTraded.length === 0) {
     console.log(`  None — every candidate has fewer than 10 pooled trades.`);
   }
 
+  let holdoutJson: { evaluated: boolean; expectancyBps?: number; trades?: number; maxDrawdownPct?: number } = { evaluated: false };
   if (significant) {
     console.log(`\n── HOLDOUT (touched once, final honest estimate) ──`);
     const holdoutSplit = { train: walkForwardPool, test: [], holdout: holdoutCandles };
     const holdoutResult = evaluateHoldoutOnce(top.strategy, holdoutSplit, DEFAULT_SIM_CONFIG, DEFAULT_FRICTION_PARAMS);
     console.log(`  Holdout expectancy: ${toBps(holdoutResult.simulatedExpectancy).toFixed(2)}bps/trade (${holdoutResult.totalTrades} trades) — DO NOT RE-RUN.`);
     console.log(`  Holdout max drawdown: ${(holdoutResult.maxDrawdownSimulated * 100).toFixed(2)}%`);
+    holdoutJson = {
+      evaluated: true,
+      expectancyBps: toBps(holdoutResult.simulatedExpectancy),
+      trades: holdoutResult.totalTrades,
+      maxDrawdownPct: holdoutResult.maxDrawdownSimulated * 100,
+    };
   } else {
     console.log(`\nNo candidate cleared significance at the committed budget (14 trials, DSR >= 0.95, min 10 pooled OOS trades). This is a valid, complete null result — the holdout is NOT touched.`);
   }
+
+  writeSearchResultJson(
+    "10C-006-donchian-channel",
+    {
+      runId: "10C-006",
+      trials: top.trials,
+      significant,
+      perFold: perFoldRecords,
+      topCandidate: {
+        label: top.label,
+        pooledExpectancyBps: toBps(top.testStats.simulatedExpectancy),
+        pooledTrades: top.testStats.totalTrades,
+        maxDrawdownPct: top.testStats.maxDrawdownSimulated * 100,
+      },
+      topCandidateReturns: top.testReturns,
+      topCandidateHoldingPeriods: topHoldingPeriods,
+      holdout: holdoutJson,
+    },
+    PREREG_DIR,
+  );
 }
 
 main();

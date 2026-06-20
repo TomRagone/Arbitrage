@@ -4,15 +4,24 @@ import { computeVerdict, getPreRegistrationRecord } from "@/lib/preregistration"
 import { EquityCurveChart } from "@/app/components/EquityCurveChart";
 import { FoldStabilityChart } from "@/app/components/FoldStabilityChart";
 
-function VerdictBlock({ verdict }: { verdict: { status: "GO" | "NO-GO" | "PENDING" | "ANOMALY"; reasons: readonly string[] } }) {
-  const badgeClass = verdict.status === "GO" ? "badge-significant" : verdict.status === "PENDING" ? "badge-in-progress" : "badge-null";
-  const icon = verdict.status === "GO" ? "✅" : verdict.status === "PENDING" ? "…" : verdict.status === "ANOMALY" ? "⚠️" : "❌";
+// A clean null (NO-EDGE) is not an error -- it's the apparatus working
+// correctly and finding nothing. Only ANOMALY (an actual rule/process
+// violation) should read as alarming; everything else is calm/neutral.
+const VERDICT_STYLE: Record<"GO" | "NO-EDGE" | "PENDING" | "ANOMALY", { badgeClass: string; borderColor: string; icon: string; label: string }> = {
+  GO: { badgeClass: "badge-significant", borderColor: "var(--good)", icon: "✅", label: "GO" },
+  "NO-EDGE": { badgeClass: "badge-no-edge", borderColor: "var(--border)", icon: "–", label: "NO EDGE FOUND" },
+  PENDING: { badgeClass: "badge-in-progress", borderColor: "var(--accent)", icon: "…", label: "PENDING" },
+  ANOMALY: { badgeClass: "badge-anomaly", borderColor: "var(--bad)", icon: "⚠️", label: "ANOMALY" },
+};
+
+function VerdictBlock({ verdict }: { verdict: { status: "GO" | "NO-EDGE" | "PENDING" | "ANOMALY"; reasons: readonly string[] } }) {
+  const style = VERDICT_STYLE[verdict.status];
   return (
-    <div className="card" style={{ borderLeft: `3px solid ${verdict.status === "GO" ? "var(--good)" : verdict.status === "ANOMALY" ? "var(--neutral)" : verdict.status === "PENDING" ? "var(--accent)" : "var(--bad)"}` }}>
+    <div className="card" style={{ borderLeft: `3px solid ${style.borderColor}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: verdict.reasons.length ? 10 : 0 }}>
-        <span style={{ fontSize: 18 }}>{icon}</span>
-        <span className={`badge ${badgeClass}`} style={{ fontSize: 13 }}>
-          {verdict.status}
+        <span style={{ fontSize: 18 }}>{style.icon}</span>
+        <span className={`badge ${style.badgeClass}`} style={{ fontSize: 13 }}>
+          {style.label}
         </span>
       </div>
       <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13.5 }}>

@@ -6,12 +6,20 @@ function StatusBadge({ status }: { status: "significant" | "null" | "in-progress
   return <span className={`badge badge-${status}`}>{label}</span>;
 }
 
-function VerdictBadge({ status }: { status: "GO" | "NO-GO" | "PENDING" | "ANOMALY" }) {
-  const cls = status === "GO" ? "badge-significant" : status === "PENDING" ? "badge-in-progress" : "badge-null";
-  const icon = status === "GO" ? "✅" : status === "PENDING" ? "…" : status === "ANOMALY" ? "⚠️" : "❌";
+// Same neutral-vs-alarming distinction as the search detail page's
+// VerdictBlock: a clean null (NO-EDGE) is not an error.
+const VERDICT_BADGE_STYLE: Record<"GO" | "NO-EDGE" | "PENDING" | "ANOMALY", { cls: string; icon: string; label: string }> = {
+  GO: { cls: "badge-significant", icon: "✅", label: "GO" },
+  "NO-EDGE": { cls: "badge-no-edge", icon: "–", label: "NO EDGE FOUND" },
+  PENDING: { cls: "badge-in-progress", icon: "…", label: "PENDING" },
+  ANOMALY: { cls: "badge-anomaly", icon: "⚠️", label: "ANOMALY" },
+};
+
+function VerdictBadge({ status }: { status: "GO" | "NO-EDGE" | "PENDING" | "ANOMALY" }) {
+  const style = VERDICT_BADGE_STYLE[status];
   return (
-    <span className={`badge ${cls}`}>
-      {icon} {status}
+    <span className={`badge ${style.cls}`}>
+      {style.icon} {style.label}
     </span>
   );
 }

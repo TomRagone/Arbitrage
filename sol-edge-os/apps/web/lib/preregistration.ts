@@ -223,7 +223,12 @@ function parsePreRegistrationRecord(fileSlug: string, md: string): PreRegistrati
 }
 
 export interface Verdict {
-  readonly status: "GO" | "NO-GO" | "PENDING" | "ANOMALY";
+  /// NO-EDGE is a clean, honest null — the search ran fully, found
+  /// nothing significant, and nothing about the process itself looks
+  /// wrong. ANOMALY is reserved for a real process/rule violation (e.g.
+  /// the holdout was touched without clearing significance) — the only
+  /// status that should actually read as alarming.
+  readonly status: "GO" | "NO-EDGE" | "PENDING" | "ANOMALY";
   readonly reasons: readonly string[];
 }
 
@@ -251,7 +256,7 @@ export function computeVerdict(record: PreRegistrationRecord): Verdict {
     const holdoutEvaluated = /evaluated once/i.test(record.holdoutStatus);
     if (significant && holdoutEvaluated) return { status: "GO", reasons: [`Holdout evaluated once: ${record.holdoutStatus}`] };
     if (significant && !holdoutEvaluated) return { status: "ANOMALY", reasons: ["DSR verdict says significant, but holdout was never evaluated — investigate."] };
-    return { status: "NO-GO", reasons: [record.dsrVerdict || "Did not clear significance (no structured data available — see markdown record)."] };
+    return { status: "NO-EDGE", reasons: [record.dsrVerdict || "Did not clear significance (no structured data available — see markdown record)."] };
   }
 
   if (data.holdout.evaluated) {
@@ -283,7 +288,7 @@ export function computeVerdict(record: PreRegistrationRecord): Verdict {
     }
   }
 
-  return { status: "NO-GO", reasons };
+  return { status: "NO-EDGE", reasons };
 }
 
 export interface MarketConfig {

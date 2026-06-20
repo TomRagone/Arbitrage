@@ -7,7 +7,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@sol-edge/core": "workspace:*"
+    "@sol-edge/core": "workspace:*",
+    "@sol-edge/sim": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

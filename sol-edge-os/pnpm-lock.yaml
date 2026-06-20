@@ -17,6 +17,9 @@ importers:
       '@sol-edge/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@sol-edge/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
     devDependencies:
       '@types/node':
         specifier: ^22.9.0
